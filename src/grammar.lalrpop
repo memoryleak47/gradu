@@ -1,0 +1,30 @@
+use std::str::FromStr;
+use crate::ast::*;
+
+grammar;
+
+pub AST: AST = {
+    <s:Stmt*> => s,
+};
+
+pub Expr: Expr = {
+    <n:Num> => Expr::IntLit(n),
+    <s:Str> => Expr::StringLit(s.to_string()),
+    <i:Ident> => Expr::Var(i.to_string()),
+    "(" <e1:Expr> <binop:BinOp> <e2:Expr> ")" => Expr::BinOp(binop, Box::new(e1), Box::new(e2)),
+    "(" <e:Expr> ")" => e,
+};
+
+pub BinOp: BinOpKind = {
+    ">" => BinOpKind::Gt,
+}
+
+pub Stmt: Stmt = {
+    <v:Ident> "=" <e:Expr> ";" => Stmt::Assign(v.to_string(), e),
+    "print" "(" <e:Expr> ")" ";" => Stmt::Print(e),
+    "if" <c: Expr> "{" <then_:AST> "}" "else" "{" <else_:AST> "}" => Stmt::If(c, then_, else_),
+};
+
+Num: i64 = <s:r"[0-9]+"> => i64::from_str(s).unwrap();
+Str: &'input str = <s:r#""[^"]*""#> => &s[1..s.len()-1];
+Ident: &'input str = r"[a-zA-Z_][a-zA-Z0-9_]*" => <>;
