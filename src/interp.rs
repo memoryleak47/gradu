@@ -43,7 +43,11 @@ fn exec_stmt(stmt: &Stmt, ctxt: &mut Ctxt) {
             }
         },
         Stmt::Print(e) => {
-            println!("{:?}", eval_expr(e, ctxt));
+            match eval_expr(e, ctxt) {
+                Value::Int(i) => println!("{i}"),
+                Value::Str(s) => println!("{s}"),
+                Value::Bool(b) => println!("{b}"),
+            }
         },
     }
 }
