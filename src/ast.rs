@@ -19,7 +19,3 @@ pub enum Expr {
 pub enum BinOpKind {
     Gt,
 }
-
-fn main() {
-    println!("Hello, world!");
-}
