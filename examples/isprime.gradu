@@ -1,0 +1,16 @@
+x = input();
+isprime = true;
+if (x < 2) {
+    isprime = false;
+} else {
+    i = 2;
+    while (i < x) {
+        if (x%i == 0) {
+            isprime = false;
+            i = x;
+        } else {
+            i = i+1;
+        }
+    }
+}
+print(isprime);

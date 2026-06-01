@@ -13,6 +13,7 @@ pub enum Expr {
     IntLit(i64),
     StringLit(String),
     Var(String),
+    Input,
 }
 
 #[derive(Debug)]

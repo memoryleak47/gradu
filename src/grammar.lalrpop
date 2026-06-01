@@ -13,6 +13,7 @@ pub Expr: Expr = {
     <i:Ident> => Expr::Var(i.to_string()),
     "(" <e1:Expr> <binop:BinOp> <e2:Expr> ")" => Expr::BinOp(binop, Box::new(e1), Box::new(e2)),
     "(" <e:Expr> ")" => e,
+    "input" "()" => Expr::Input,
 };
 
 pub BinOp: BinOpKind = {

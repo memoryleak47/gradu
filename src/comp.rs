@@ -1,5 +1,34 @@
 use crate::ast::*;
 use std::collections::HashSet;
+use std::process::Command;
+
+pub fn comp(ast: &AST) {
+    let compiled = comp_str(ast);
+    std::fs::write("gen.c", compiled).unwrap();
+    let co = Command::new("gcc").arg("gen.c").arg("-o").arg("gen").output().unwrap().stderr;
+    let co2 = String::from_utf8_lossy(&co);
+    if !co2.is_empty() {
+        println!("compiler error: {co2:?}");
+    }
+
+    let out = Command::new("./gen").output().unwrap().stdout;
+    let out2 = String::from_utf8_lossy(&out);
+    println!("{out2}");
+}
+
+fn comp_str(ast: &AST) -> String {
+    let preamble = include_str!("preamble.h");
+
+    let mut vars = get_vars(ast).into_iter().collect::<Vec<_>>();
+    vars.sort();
+    let mut varprefix = String::new();
+    for x in vars {
+        varprefix.push_str(&format!("    Value {x};\n"));
+    }
+    
+    let s = comp_ast(ast);
+    format!("{preamble}int main() {{\n{varprefix}{s}    return 0;\n}}")
+}
 
 fn get_vars_expr(expr: &Expr) -> HashSet<String> {
     let mut vars = HashSet::new();
@@ -13,6 +42,7 @@ fn get_vars_expr(expr: &Expr) -> HashSet<String> {
         Expr::Var(v) => {
             vars.insert(v.to_string());
         },
+        Expr::Input => {},
     }
     vars
 }
@@ -53,6 +83,9 @@ fn comp_expr(e: &Expr) -> String {
             format!("mk_str(\"{s}\")")
         },
         Expr::Var(v) => format!("{v}"),
+        Expr::Input => {
+            format!("input()")
+        },
     }
 }
 
@@ -78,18 +111,4 @@ fn comp_ast(ast: &AST) -> String {
         out.push_str(&comp_stmt(stmt));
     }
     out
-}
-
-pub fn comp(ast: &AST) -> String {
-    let preamble = include_str!("preamble.h");
-
-    let mut vars = get_vars(ast).into_iter().collect::<Vec<_>>();
-    vars.sort();
-    let mut varprefix = String::new();
-    for x in vars {
-        varprefix.push_str(&format!("    Value {x};\n"));
-    }
-    
-    let s = comp_ast(ast);
-    format!("{preamble}int main() {{\n{varprefix}{s}    return 0;\n}}")
 }

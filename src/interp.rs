@@ -23,6 +23,24 @@ fn eval_expr(e: &Expr, ctxt: &mut Ctxt) -> Value {
         Expr::IntLit(i) => Value::Int(*i),
         Expr::StringLit(s) => Value::Str(s.to_string()),
         Expr::Var(v) => ctxt.vars[&*v].clone(),
+        Expr::Input => {
+            let mut s = String::new();
+            std::io::stdin().read_line(&mut s).unwrap();
+            if s.starts_with("\"") && s.ends_with("\"") && s.chars().filter(|x| *x == '\"').count() == 2 {
+                s.remove(s.len()-1);
+                s.remove(0);
+
+                Value::Str(s)
+            } else if s == "true" {
+                Value::Bool(true)
+            } else if s == "false" {
+                Value::Bool(false)
+            } else if let Ok(i) = s.parse::<i64>() {
+                Value::Int(i)
+            } else {
+                panic!("invalid value {s}!");
+            }
+        },
     }
 }
 
