@@ -111,15 +111,23 @@ fn type_cast_to_bool(e: String, old: LayoutType) -> String {
     }
 }
 
+fn comp_equ(e1: String, t1: LayoutType, e2: String, t2: LayoutType) -> String {
+    if t1 == t2 && (t1 == LayoutType::Int || t1 == LayoutType::Bool) {
+        return format!("({e1} == {e2})")
+    }
+
+    let e1 = type_cast_to_value(e1, t1);
+    let e2 = type_cast_to_value(e2, t2);
+    format!("is_equal({e1}, {e2})")
+}
+
 fn comp_expr_raw(e: &Expr, tyctxt: &TyCtxt) -> (String, LayoutType) {
     match e {
         Expr::BinOp(op, e1, e2) => {
             let (e1, t1) = comp_expr_raw(e1, tyctxt);
             let (e2, t2) = comp_expr_raw(e2, tyctxt);
             if let BinOpKind::Equ = op {
-                let e1 = type_cast_to_value(e1, t1);
-                let e2 = type_cast_to_value(e2, t2);
-                return (format!("is_equal({e1}, {e2})"), LayoutType::Bool)
+                return (comp_equ(e1, t1, e2, t2), LayoutType::Bool)
             }
             let e1 = type_cast_to_int(e1, t1);
             let e2 = type_cast_to_int(e2, t2);
