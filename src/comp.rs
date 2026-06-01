@@ -50,7 +50,7 @@ fn comp_expr(e: &Expr) -> String {
             format!("((Value) {{ .tag = TAG_INT, .payload.i = {i} }})")
         },
         Expr::StringLit(s) => {
-            format!("((Value) {{ .tag = TAG_STR , .payload.i = \"{s}\" }})")
+            format!("((Value) {{ .tag = TAG_STR , .payload.s = \"{s}\" }})")
         },
         Expr::Var(v) => format!("{v}"),
     }
@@ -65,7 +65,8 @@ fn comp_stmt(stmt: &Stmt) -> String {
             format!("    if ({}.payload.b) {{\n{}    }} else {{\n{}    }}\n", comp_expr(cond), comp_ast(then_), comp_ast(else_))
         },
         Stmt::Print(e) => {
-            format!("    puts(\"ok\");\n")
+            let e = comp_expr(e);
+            format!("    print_value({e});\n")
         },
     }
 }
