@@ -32,7 +32,7 @@ fn comp_str(ast: &AST, tyctxt: &TyCtxt) -> String {
         varprefix.push_str(&format!("    {ty} {x};\n"));
     }
     
-    let s = comp_ast(ast, tyctxt);
+    let s = comp_ast(ast, tyctxt, 0);
     format!("{preamble}int main() {{\n{varprefix}{s}    return 0;\n}}")
 }
 
@@ -167,37 +167,38 @@ fn comp_expr_raw(e: &Expr, tyctxt: &TyCtxt) -> (String, LayoutType) {
     }
 }
 
-fn comp_stmt(stmt: &Stmt, tyctxt: &TyCtxt) -> String {
+fn comp_stmt(stmt: &Stmt, tyctxt: &TyCtxt, level: usize) -> String {
+    let spaces = "    ".repeat(level+1);
     match stmt {
         Stmt::Assign(v, e) => {
             let (mut e, t) = comp_expr_raw(e, tyctxt);
             if t != tyctxt[&*v] {
                 e = type_cast_to_value(e, t);
             }
-            format!("    {v} = {e};\n")
+            format!("{spaces}{v} = {e};\n")
         },
         Stmt::If(cond, then_, else_) => {
             let (cond, tcond) = comp_expr_raw(cond, tyctxt);
             let cond = type_cast_to_bool(cond, tcond);
-            format!("    if ({}) {{\n{}    }} else {{\n{}    }}\n", cond, comp_ast(then_, tyctxt), comp_ast(else_, tyctxt))
+            format!("{spaces}if ({}) {{\n{}{spaces}}} else {{\n{}{spaces}}}\n", cond, comp_ast(then_, tyctxt, level+1), comp_ast(else_, tyctxt, level+1))
         },
         Stmt::While(cond, body) => {
             let (cond, tcond) = comp_expr_raw(cond, tyctxt);
             let cond = type_cast_to_bool(cond, tcond);
-            format!("    while ({}) {{\n{}    }}\n", cond, comp_ast(body, tyctxt))
+            format!("{spaces}while ({}) {{\n{}{spaces}}}\n", cond, comp_ast(body, tyctxt, level+1))
         },
         Stmt::Print(e) => {
             let e = comp_expr(e, tyctxt);
-            format!("    print_value({e});\n")
+            format!("{spaces}print_value({e});\n")
         },
     }
 }
 
 
-fn comp_ast(ast: &AST, tyctxt: &TyCtxt) -> String {
+fn comp_ast(ast: &AST, tyctxt: &TyCtxt, level: usize) -> String {
     let mut out = String::new();
     for stmt in ast {
-        out.push_str(&comp_stmt(stmt, tyctxt));
+        out.push_str(&comp_stmt(stmt, tyctxt, level));
     }
     out
 }
