@@ -10,6 +10,9 @@ pub use comp::*;
 mod parse;
 pub use parse::*;
 
+mod ty;
+pub use ty::*;
+
 fn main() {
     let s = include_str!("../examples/isprime.gradu");
     let ast = parse(&s);
