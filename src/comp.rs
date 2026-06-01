@@ -44,13 +44,13 @@ fn comp_expr(e: &Expr) -> String {
             let e1 = comp_expr(e1);
             let e2 = comp_expr(e2);
             let v = format!("(({e1}).payload.i > ({e2}).payload.i)");
-            format!("((Value) {{ .tag = TAG_BOOL, .payload.b = {v} }})")
+            format!("mk_bool({v})")
         },
         Expr::IntLit(i) => {
-            format!("((Value) {{ .tag = TAG_INT, .payload.i = {i} }})")
+            format!("mk_int({i})")
         },
         Expr::StringLit(s) => {
-            format!("((Value) {{ .tag = TAG_STR , .payload.s = \"{s}\" }})")
+            format!("mk_str(\"{s}\")")
         },
         Expr::Var(v) => format!("{v}"),
     }

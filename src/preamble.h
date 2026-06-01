@@ -6,6 +6,11 @@ const char TAG_BOOL = 1;
 const char TAG_STR = 2;
 const char TAG_NIL = 3;
 
+#define mk_int(x) ((Value) { .tag = TAG_INT, .payload.i = x })
+#define mk_bool(x) ((Value) { .tag = TAG_BOOL, .payload.b = x })
+#define mk_str(x) ((Value) { .tag = TAG_STR, .payload.s = x })
+#define mk_nil() ((Value) { .tag = TAG_NIL})
+
 typedef struct {
     char tag;
     union {
