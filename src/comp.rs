@@ -97,6 +97,14 @@ fn type_cast_to_int(e: String, old: LayoutType) -> String {
     }
 }
 
+fn type_cast_to_bool(e: String, old: LayoutType) -> String {
+    match old {
+        LayoutType::Bool => e,
+        LayoutType::Value => format!("to_bool({e})"),
+        _ => panic!(),
+    }
+}
+
 fn comp_expr_raw(e: &Expr) -> (String, LayoutType) {
     match e {
         Expr::BinOp(op, e1, e2) => {
@@ -151,10 +159,14 @@ fn comp_stmt(stmt: &Stmt) -> String {
             format!("    {v} = {};\n", comp_expr(e))
         },
         Stmt::If(cond, then_, else_) => {
-            format!("    if ({}.payload.b) {{\n{}    }} else {{\n{}    }}\n", comp_expr(cond), comp_ast(then_), comp_ast(else_))
+            let (cond, tcond) = comp_expr_raw(cond);
+            let cond = type_cast_to_bool(cond, tcond);
+            format!("    if ({}) {{\n{}    }} else {{\n{}    }}\n", cond, comp_ast(then_), comp_ast(else_))
         },
         Stmt::While(cond, body) => {
-            format!("    while ({}.payload.b) {{\n{}    }}\n", comp_expr(cond), comp_ast(body))
+            let (cond, tcond) = comp_expr_raw(cond);
+            let cond = type_cast_to_bool(cond, tcond);
+            format!("    while ({}) {{\n{}    }}\n", cond, comp_ast(body))
         },
         Stmt::Print(e) => {
             let e = comp_expr(e);
