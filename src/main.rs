@@ -13,6 +13,8 @@ pub use parse::*;
 mod ty;
 pub use ty::*;
 
+use std::collections::HashMap;
+
 fn main() {
     let s = include_str!("../examples/isprime.gradu");
     let ast = parse(&s);

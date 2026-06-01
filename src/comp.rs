@@ -3,7 +3,8 @@ use std::collections::HashSet;
 use std::process::Command;
 
 pub fn comp(ast: &AST) {
-    let compiled = comp_str(ast);
+    let tyctxt = ty_infer(ast);
+    let compiled = comp_str(ast, &tyctxt);
     std::fs::write("gen.c", compiled).unwrap();
     let co = Command::new("gcc").arg("gen.c").arg("-o").arg("gen").output().unwrap().stderr;
     let co2 = String::from_utf8_lossy(&co);
@@ -16,17 +17,22 @@ pub fn comp(ast: &AST) {
     println!("{out2}");
 }
 
-fn comp_str(ast: &AST) -> String {
+fn comp_str(ast: &AST, tyctxt: &TyCtxt) -> String {
     let preamble = include_str!("preamble.h");
 
-    let mut vars = get_vars(ast).into_iter().collect::<Vec<_>>();
-    vars.sort();
     let mut varprefix = String::new();
-    for x in vars {
-        varprefix.push_str(&format!("    Value {x};\n"));
+    for (x, ty) in tyctxt.iter() {
+        let ty = match ty {
+            LayoutType::Value => "Value",
+            LayoutType::Int => "int",
+            LayoutType::Bool => "bool",
+            LayoutType::Str => "char*",
+            LayoutType::Nil => panic!(),
+        };
+        varprefix.push_str(&format!("    {ty} {x};\n"));
     }
     
-    let s = comp_ast(ast);
+    let s = comp_ast(ast, tyctxt);
     format!("{preamble}int main() {{\n{varprefix}{s}    return 0;\n}}")
 }
 
@@ -48,7 +54,7 @@ fn get_vars_expr(expr: &Expr) -> HashSet<String> {
     vars
 }
 
-fn get_vars(ast: &AST) -> HashSet<String> {
+pub fn get_vars(ast: &AST) -> HashSet<String> {
     let mut vars = HashSet::new();
     for st in ast {
         match st {
@@ -74,8 +80,8 @@ fn get_vars(ast: &AST) -> HashSet<String> {
 }
 
 // always produces "Value" type
-fn comp_expr(e: &Expr) -> String {
-    let (s, ty) = comp_expr_raw(e);
+fn comp_expr(e: &Expr, tyctxt: &TyCtxt) -> String {
+    let (s, ty) = comp_expr_raw(e, tyctxt);
     type_cast_to_value(s, ty)
 }
 
@@ -105,11 +111,11 @@ fn type_cast_to_bool(e: String, old: LayoutType) -> String {
     }
 }
 
-fn comp_expr_raw(e: &Expr) -> (String, LayoutType) {
+fn comp_expr_raw(e: &Expr, tyctxt: &TyCtxt) -> (String, LayoutType) {
     match e {
         Expr::BinOp(op, e1, e2) => {
-            let (e1, t1) = comp_expr_raw(e1);
-            let (e2, t2) = comp_expr_raw(e2);
+            let (e1, t1) = comp_expr_raw(e1, tyctxt);
+            let (e2, t2) = comp_expr_raw(e2, tyctxt);
             if let BinOpKind::Equ = op {
                 let e1 = type_cast_to_value(e1, t1);
                 let e2 = type_cast_to_value(e2, t2);
@@ -146,40 +152,44 @@ fn comp_expr_raw(e: &Expr) -> (String, LayoutType) {
                 (format!("false"), LayoutType::Bool)
             }
         },
-        Expr::Var(v) => (format!("{v}"), LayoutType::Value),
+        Expr::Var(v) => (format!("{v}"), tyctxt[v]),
         Expr::Input => {
             (format!("input()"), LayoutType::Value)
         },
     }
 }
 
-fn comp_stmt(stmt: &Stmt) -> String {
+fn comp_stmt(stmt: &Stmt, tyctxt: &TyCtxt) -> String {
     match stmt {
         Stmt::Assign(v, e) => {
-            format!("    {v} = {};\n", comp_expr(e))
+            let (mut e, t) = comp_expr_raw(e, tyctxt);
+            if t != tyctxt[&*v] {
+                e = type_cast_to_value(e, t);
+            }
+            format!("    {v} = {e};\n")
         },
         Stmt::If(cond, then_, else_) => {
-            let (cond, tcond) = comp_expr_raw(cond);
+            let (cond, tcond) = comp_expr_raw(cond, tyctxt);
             let cond = type_cast_to_bool(cond, tcond);
-            format!("    if ({}) {{\n{}    }} else {{\n{}    }}\n", cond, comp_ast(then_), comp_ast(else_))
+            format!("    if ({}) {{\n{}    }} else {{\n{}    }}\n", cond, comp_ast(then_, tyctxt), comp_ast(else_, tyctxt))
         },
         Stmt::While(cond, body) => {
-            let (cond, tcond) = comp_expr_raw(cond);
+            let (cond, tcond) = comp_expr_raw(cond, tyctxt);
             let cond = type_cast_to_bool(cond, tcond);
-            format!("    while ({}) {{\n{}    }}\n", cond, comp_ast(body))
+            format!("    while ({}) {{\n{}    }}\n", cond, comp_ast(body, tyctxt))
         },
         Stmt::Print(e) => {
-            let e = comp_expr(e);
+            let e = comp_expr(e, tyctxt);
             format!("    print_value({e});\n")
         },
     }
 }
 
 
-fn comp_ast(ast: &AST) -> String {
+fn comp_ast(ast: &AST, tyctxt: &TyCtxt) -> String {
     let mut out = String::new();
     for stmt in ast {
-        out.push_str(&comp_stmt(stmt));
+        out.push_str(&comp_stmt(stmt, tyctxt));
     }
     out
 }
