@@ -89,48 +89,60 @@ fn type_cast_to_value(e: String, old: LayoutType) -> String {
     }
 }
 
+fn type_cast_to_int(e: String, old: LayoutType) -> String {
+    match old {
+        LayoutType::Int => e,
+        LayoutType::Value => format!("to_int({e})"),
+        _ => panic!(),
+    }
+}
+
 fn comp_expr_raw(e: &Expr) -> (String, LayoutType) {
-    let out = match e {
+    match e {
         Expr::BinOp(op, e1, e2) => {
-            let e1 = comp_expr(e1);
-            let e2 = comp_expr(e2);
+            let (e1, t1) = comp_expr_raw(e1);
+            let (e2, t2) = comp_expr_raw(e2);
+            if let BinOpKind::Equ = op {
+                let e1 = type_cast_to_value(e1, t1);
+                let e2 = type_cast_to_value(e2, t2);
+                return (format!("is_equal({e1}, {e2})"), LayoutType::Bool)
+            }
+            let e1 = type_cast_to_int(e1, t1);
+            let e2 = type_cast_to_int(e2, t2);
             match op {
                 BinOpKind::Lt => {
-                    format!("mk_bool(({e1}).payload.i < ({e2}).payload.i)")
+                    (format!("({e1} < {e2})"), LayoutType::Bool)
                 },
                 BinOpKind::Gt => {
-                    format!("mk_bool(({e1}).payload.i > ({e2}).payload.i)")
+                    (format!("({e1} > {e2})"), LayoutType::Bool)
                 },
                 BinOpKind::Mod => {
-                    format!("mk_int(({e1}).payload.i % ({e2}).payload.i)")
+                    (format!("({e1} % {e2})"), LayoutType::Int)
                 },
                 BinOpKind::Plus => {
-                    format!("mk_int(({e1}).payload.i + ({e2}).payload.i)")
+                    (format!("({e1} + {e2})"), LayoutType::Int)
                 },
-                BinOpKind::Equ => {
-                    format!("is_equal({e1}, {e2})")
-                },
+                BinOpKind::Equ => unreachable!(),
             }
         },
         Expr::IntLit(i) => {
-            format!("mk_int({i})")
+            (format!("{i}"), LayoutType::Int)
         },
         Expr::StringLit(s) => {
-            format!("mk_str(\"{s}\")")
+            (format!("\"{s}\""), LayoutType::Str)
         },
         Expr::BoolLit(b) => {
             if *b {
-                return (format!("true"), LayoutType::Bool)
+                (format!("true"), LayoutType::Bool)
             } else {
-                return (format!("false"), LayoutType::Bool)
+                (format!("false"), LayoutType::Bool)
             }
         },
-        Expr::Var(v) => format!("{v}"),
+        Expr::Var(v) => (format!("{v}"), LayoutType::Value),
         Expr::Input => {
-            format!("input()")
+            (format!("input()"), LayoutType::Value)
         },
-    };
-    (out, LayoutType::Value)
+    }
 }
 
 fn comp_stmt(stmt: &Stmt) -> String {

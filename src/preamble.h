@@ -68,13 +68,18 @@ Value input() {
     exit(EXIT_FAILURE);
 }
 
-Value is_equal(Value v1, Value v2) {
-    if (v1.tag != v2.tag) { return mk_bool(false); }
+int to_int(Value v) {
+    assert(v.tag == TAG_INT);
+    return v.payload.i;
+}
+
+bool is_equal(Value v1, Value v2) {
+    if (v1.tag != v2.tag) { return false; }
     switch (v1.tag) {
-        case TAG_INT: return mk_bool(v1.payload.i == v2.payload.i);
-        case TAG_BOOL: return mk_bool(v1.payload.b == v2.payload.b);
-        case TAG_STR: return mk_bool(strcmp(v1.payload.s, v2.payload.s) == 0);
-        case TAG_NIL: return mk_bool(true);
+        case TAG_INT: return v1.payload.i == v2.payload.i;
+        case TAG_BOOL: return v1.payload.b == v2.payload.b;
+        case TAG_STR: return strcmp(v1.payload.s, v2.payload.s) == 0;
+        case TAG_NIL: return true;
         default: assert(false);
     }
 }
