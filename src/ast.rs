@@ -13,6 +13,7 @@ pub enum Expr {
     BinOp(BinOpKind, Box<Expr>, Box<Expr>),
     IntLit(i64),
     StringLit(String),
+    BoolLit(bool),
     Var(String),
     Input,
 }

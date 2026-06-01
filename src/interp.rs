@@ -35,10 +35,12 @@ fn eval_expr(e: &Expr, ctxt: &mut Ctxt) -> Value {
         },
         Expr::IntLit(i) => Value::Int(*i),
         Expr::StringLit(s) => Value::Str(s.to_string()),
-        Expr::Var(v) => ctxt.vars[&*v].clone(),
+        Expr::BoolLit(b) => Value::Bool(*b),
+        Expr::Var(v) => ctxt.vars.get(&*v).expect(&format!("Var '{v}' not found")).clone(),
         Expr::Input => {
             let mut s = String::new();
             std::io::stdin().read_line(&mut s).unwrap();
+            let mut s = s.trim().to_string();
             if s.starts_with("\"") && s.ends_with("\"") && s.chars().filter(|x| *x == '\"').count() == 2 {
                 s.remove(s.len()-1);
                 s.remove(0);

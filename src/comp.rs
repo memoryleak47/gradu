@@ -37,8 +37,9 @@ fn get_vars_expr(expr: &Expr) -> HashSet<String> {
             vars.extend(get_vars_expr(e1));
             vars.extend(get_vars_expr(e2));
         },
-        Expr::IntLit(i) => {},
-        Expr::StringLit(s) => {},
+        Expr::IntLit(_) => {},
+        Expr::StringLit(_) => {},
+        Expr::BoolLit(_) => {},
         Expr::Var(v) => {
             vars.insert(v.to_string());
         },
@@ -91,7 +92,7 @@ fn comp_expr(e: &Expr) -> String {
                     format!("mk_int(({e1}).payload.i + ({e2}).payload.i)")
                 },
                 BinOpKind::Equ => {
-                    format!("mk_bool({e1} == {e2})")
+                    format!("is_equal({e1}, {e2})")
                 },
             }
         },
@@ -100,6 +101,13 @@ fn comp_expr(e: &Expr) -> String {
         },
         Expr::StringLit(s) => {
             format!("mk_str(\"{s}\")")
+        },
+        Expr::BoolLit(b) => {
+            if *b {
+                format!("mk_bool(true)")
+            } else {
+                format!("mk_bool(false)")
+            }
         },
         Expr::Var(v) => format!("{v}"),
         Expr::Input => {

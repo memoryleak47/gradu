@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 
-const char TAG_INT = 0;
-const char TAG_BOOL = 1;
-const char TAG_STR = 2;
-const char TAG_NIL = 3;
+#define TAG_INT 0
+#define TAG_BOOL 1
+#define TAG_STR 2
+#define TAG_NIL 3
 
 #define mk_int(x) ((Value) { .tag = TAG_INT, .payload.i = x })
 #define mk_bool(x) ((Value) { .tag = TAG_BOOL, .payload.b = x })
@@ -24,7 +27,11 @@ void print_value(Value v) {
     if (v.tag == TAG_INT) {
         printf("%i\n", v.payload.i);
     } else if (v.tag == TAG_BOOL) {
-        printf("%b\n", v.payload.b);
+        if (v.payload.b) {
+            printf("true\n");
+        } else {
+            printf("false\n");
+        }
     } else if (v.tag == TAG_STR) {
         printf("%s\n", v.payload.s);
     } else if (v.tag == TAG_NIL) {
@@ -35,3 +42,39 @@ void print_value(Value v) {
     }
 }
 
+Value input() {
+    char buf[1024];
+    if (!fgets(buf, sizeof(buf), stdin)) {
+        fprintf(stderr, "Fatal error: Failed to read from stdin\n");
+        exit(EXIT_FAILURE);
+    }
+    buf[strcspn(buf, "\n")] = '\0';
+
+    if (strcmp(buf, "true") == 0)  return (Value){.tag = TAG_BOOL, .payload.b = true};
+    if (strcmp(buf, "false") == 0) return (Value){.tag = TAG_BOOL, .payload.b = false};
+
+    size_t len = strlen(buf);
+    if (len >= 2 && buf[0] == '"' && buf[len - 1] == '"') {
+        return (Value){.tag = TAG_STR, .payload.s = strndup(buf + 1, len - 2)};
+    }
+
+    char* endptr;
+    long val = strtol(buf, &endptr, 10);
+    if (endptr != buf && *endptr == '\0') {
+        return (Value) {.tag = TAG_INT, .payload.i = (int)val};
+    }
+
+    fprintf(stderr, "Fatal error: Invalid input '%s'\n", buf);
+    exit(EXIT_FAILURE);
+}
+
+Value is_equal(Value v1, Value v2) {
+    if (v1.tag != v2.tag) { return mk_bool(false); }
+    switch (v1.tag) {
+        case TAG_INT: return mk_bool(v1.payload.i == v2.payload.i);
+        case TAG_BOOL: return mk_bool(v1.payload.b == v2.payload.b);
+        case TAG_STR: return mk_bool(strcmp(v1.payload.s, v2.payload.s) == 0);
+        case TAG_NIL: return mk_bool(true);
+        default: assert(false);
+    }
+}
