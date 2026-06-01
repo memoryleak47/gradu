@@ -66,7 +66,14 @@ fn get_var(v: &str, ctxt: &TyLatticeCtxt) -> TypeLattice {
 
 fn ty_infer_expr(expr: &Expr, ctxt: &TyLatticeCtxt) -> TypeLattice {
     match expr {
-        Expr::BinOp(k, e1, e2) => TypeLattice::top(),
+        Expr::BinOp(kind, _, _) => {
+            match kind {
+                BinOpKind::Equ | BinOpKind::Lt | BinOpKind::Gt =>
+                    TypeLattice { might_be_bool: true, ..TypeLattice::bot() },
+                BinOpKind::Plus | BinOpKind::Mod =>
+                    TypeLattice { might_be_int: true, ..TypeLattice::bot() },
+            }
+        },
         Expr::IntLit(_) => TypeLattice { might_be_int: true, ..TypeLattice::bot() },
         Expr::StringLit(_) => TypeLattice { might_be_str: true, ..TypeLattice::bot() },
         Expr::BoolLit(_) => TypeLattice { might_be_bool: true, ..TypeLattice::bot() },
