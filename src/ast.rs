@@ -4,6 +4,7 @@ pub type AST = Vec<Stmt>;
 pub enum Stmt {
     Assign(String, Expr),
     If(Expr, /*then*/ AST, /*else*/ AST),
+    While(Expr, AST),
     Print(Expr),
 }
 
@@ -18,5 +19,9 @@ pub enum Expr {
 
 #[derive(Debug)]
 pub enum BinOpKind {
+    Lt,
     Gt,
+    Mod,
+    Plus,
+    Equ,
 }

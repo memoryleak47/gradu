@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use crate::ast::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Value {
     Bool(bool),
     Int(i64),
@@ -15,10 +15,23 @@ struct Ctxt {
 
 fn eval_expr(e: &Expr, ctxt: &mut Ctxt) -> Value {
     match e {
-        Expr::BinOp(BinOpKind::Gt, e1, e2) => {
-            let Value::Int(e1) = eval_expr(e1, ctxt) else { panic!() };
-            let Value::Int(e2) = eval_expr(e2, ctxt) else { panic!() };
-            Value::Bool(e1 < e2)
+        Expr::BinOp(op, e1, e2) => {
+            let e1 = eval_expr(e1, ctxt);
+            let e2 = eval_expr(e2, ctxt);
+            if let BinOpKind::Equ = op {
+                return Value::Bool(e1 == e2)
+            }
+
+            let Value::Int(e1) = e1 else { panic!() };
+            let Value::Int(e2) = e2 else { panic!() };
+
+            match op {
+                BinOpKind::Lt => Value::Bool(e1 < e2),
+                BinOpKind::Gt => Value::Bool(e1 > e2),
+                BinOpKind::Mod => Value::Int(e1 % e2),
+                BinOpKind::Plus => Value::Int(e1 + e2),
+                BinOpKind::Equ => unreachable!(),
+            }
         },
         Expr::IntLit(i) => Value::Int(*i),
         Expr::StringLit(s) => Value::Str(s.to_string()),
@@ -60,6 +73,15 @@ fn exec_stmt(stmt: &Stmt, ctxt: &mut Ctxt) {
                exec_ast(else_, ctxt);
             }
         },
+        Stmt::While(cond, body) => {
+            loop {
+                let Value::Bool(b) = eval_expr(cond, ctxt) else {
+                    panic!("non-bool conditional value (while)!")
+                };
+                if !b { break }
+                exec_ast(body, ctxt);
+            }
+        }
         Stmt::Print(e) => {
             match eval_expr(e, ctxt) {
                 Value::Int(i) => println!("{i}"),

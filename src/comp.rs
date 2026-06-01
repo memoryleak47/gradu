@@ -60,6 +60,10 @@ fn get_vars(ast: &AST) -> HashSet<String> {
                 vars.extend(get_vars(then_));
                 vars.extend(get_vars(else_));
             },
+            Stmt::While(cond, body) => {
+                vars.extend(get_vars_expr(cond));
+                vars.extend(get_vars(body));
+            },
             Stmt::Print(e) => {
                 vars.extend(get_vars_expr(e));
             },
@@ -70,11 +74,26 @@ fn get_vars(ast: &AST) -> HashSet<String> {
 
 fn comp_expr(e: &Expr) -> String {
     match e {
-        Expr::BinOp(BinOpKind::Gt, e1, e2) => {
+        Expr::BinOp(op, e1, e2) => {
             let e1 = comp_expr(e1);
             let e2 = comp_expr(e2);
-            let v = format!("(({e1}).payload.i > ({e2}).payload.i)");
-            format!("mk_bool({v})")
+            match op {
+                BinOpKind::Lt => {
+                    format!("mk_bool(({e1}).payload.i < ({e2}).payload.i)")
+                },
+                BinOpKind::Gt => {
+                    format!("mk_bool(({e1}).payload.i > ({e2}).payload.i)")
+                },
+                BinOpKind::Mod => {
+                    format!("mk_int(({e1}).payload.i % ({e2}).payload.i)")
+                },
+                BinOpKind::Plus => {
+                    format!("mk_int(({e1}).payload.i + ({e2}).payload.i)")
+                },
+                BinOpKind::Equ => {
+                    format!("mk_bool({e1} == {e2})")
+                },
+            }
         },
         Expr::IntLit(i) => {
             format!("mk_int({i})")
@@ -96,6 +115,9 @@ fn comp_stmt(stmt: &Stmt) -> String {
         },
         Stmt::If(cond, then_, else_) => {
             format!("    if ({}.payload.b) {{\n{}    }} else {{\n{}    }}\n", comp_expr(cond), comp_ast(then_), comp_ast(else_))
+        },
+        Stmt::While(cond, body) => {
+            format!("    while ({}.payload.b) {{\n{}    }}\n", comp_expr(cond), comp_ast(body))
         },
         Stmt::Print(e) => {
             let e = comp_expr(e);

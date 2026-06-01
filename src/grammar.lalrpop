@@ -18,12 +18,17 @@ pub Expr: Expr = {
 
 pub BinOp: BinOpKind = {
     ">" => BinOpKind::Gt,
+    "<" => BinOpKind::Lt,
+    "%" => BinOpKind::Mod,
+    "+" => BinOpKind::Plus,
+    "==" => BinOpKind::Equ,
 }
 
 pub Stmt: Stmt = {
     <v:Ident> "=" <e:Expr> ";" => Stmt::Assign(v.to_string(), e),
     "print" "(" <e:Expr> ")" ";" => Stmt::Print(e),
     "if" <c: Expr> "{" <then_:AST> "}" "else" "{" <else_:AST> "}" => Stmt::If(c, then_, else_),
+    "while" <c: Expr> "{" <body:AST> "}" => Stmt::While(c, body),
 };
 
 Num: i64 = <s:r"[0-9]+"> => i64::from_str(s).unwrap();
