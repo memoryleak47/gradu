@@ -1,4 +1,4 @@
-x = input();
+x = 479001599;
 isprime = true;
 if (x < 2) {
     isprime = false;

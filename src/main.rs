@@ -13,7 +13,7 @@ pub use parse::*;
 fn main() {
     let s = include_str!("../examples/isprime.gradu");
     let ast = parse(&s);
-    interp::interp(&ast);
 
+    // interp::interp(&ast);
     comp::comp(&ast);
 }

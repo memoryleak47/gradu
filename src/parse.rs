@@ -13,7 +13,7 @@ pub fn parse(s: &str) -> AST {
 }
 
 fn print_parse_error(input: &str, err: ParseError<usize, grammar::Token, &str>) -> ! {
-    let (start, end) = match err {
+    let (start, _) = match err {
         ParseError::InvalidToken { location } => (location, location + 1),
         ParseError::UnrecognizedEof { location, .. } => (location, location + 1),
         ParseError::UnrecognizedToken { token, .. } => (token.0, token.2),
@@ -42,7 +42,7 @@ fn location_to_line_col(input: &str, offset: usize) -> (usize, usize, &str) {
     let mut linestr = "";
 
     for (i, c) in input.char_indices() {
-        if (col == 1) {
+        if col == 1 {
             linestr = &input[i..];
             linestr = linestr.split("\n").next().unwrap();
         }
