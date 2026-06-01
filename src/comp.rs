@@ -1,4 +1,4 @@
-use crate::ast::*;
+use crate::*;
 use std::collections::HashSet;
 use std::process::Command;
 
@@ -73,8 +73,24 @@ fn get_vars(ast: &AST) -> HashSet<String> {
     vars
 }
 
+// always produces "Value" type
 fn comp_expr(e: &Expr) -> String {
-    match e {
+    let (s, ty) = comp_expr_raw(e);
+    type_cast_to_value(s, ty)
+}
+
+fn type_cast_to_value(e: String, old: LayoutType) -> String {
+    match old {
+        LayoutType::Bool => format!("mk_bool({e})"),
+        LayoutType::Nil => todo!(),
+        LayoutType::Str => format!("mk_str({e})"),
+        LayoutType::Int => format!("mk_int({e})"),
+        LayoutType::Value => e,
+    }
+}
+
+fn comp_expr_raw(e: &Expr) -> (String, LayoutType) {
+    let out = match e {
         Expr::BinOp(op, e1, e2) => {
             let e1 = comp_expr(e1);
             let e2 = comp_expr(e2);
@@ -113,7 +129,8 @@ fn comp_expr(e: &Expr) -> String {
         Expr::Input => {
             format!("input()")
         },
-    }
+    };
+    (out, LayoutType::Value)
 }
 
 fn comp_stmt(stmt: &Stmt) -> String {
