@@ -1,12 +1,12 @@
 #include <stdio.h>
 
-const int8_t TAG_INT = 0;
-const int8_t TAG_BOOL = 1;
-const int8_t TAG_STR = 2;
-const int8_t TAG_NIL = 3;
+const char TAG_INT = 0;
+const char TAG_BOOL = 1;
+const char TAG_STR = 2;
+const char TAG_NIL = 3;
 
 typedef struct {
-    int8_t tag;
+    char tag;
     union {
         int i;
         bool b;

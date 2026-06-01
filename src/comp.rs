@@ -41,10 +41,17 @@ fn get_vars(ast: &AST) -> HashSet<String> {
 fn comp_expr(e: &Expr) -> String {
     match e {
         Expr::BinOp(BinOpKind::Gt, e1, e2) => {
-            format!("({} > {})", comp_expr(e1), comp_expr(e2))
+            let e1 = comp_expr(e1);
+            let e2 = comp_expr(e2);
+            let v = format!("(({e1}).payload.i > ({e2}).payload.i)");
+            format!("((Value) {{ .tag = TAG_BOOL, .payload.b = {v} }})")
         },
-        Expr::IntLit(i) => format!("{i}"),
-        Expr::StringLit(s) => format!("\"{s}\""),
+        Expr::IntLit(i) => {
+            format!("((Value) {{ .tag = TAG_INT, .payload.i = {i} }})")
+        },
+        Expr::StringLit(s) => {
+            format!("((Value) {{ .tag = TAG_STR , .payload.i = \"{s}\" }})")
+        },
         Expr::Var(v) => format!("{v}"),
     }
 }
@@ -55,7 +62,7 @@ fn comp_stmt(stmt: &Stmt) -> String {
             format!("    {v} = {};\n", comp_expr(e))
         },
         Stmt::If(cond, then_, else_) => {
-            format!("    if ({}) {{\n{}    }} else {{\n{}    }}\n", comp_expr(cond), comp_ast(then_), comp_ast(else_))
+            format!("    if ({}.payload.b) {{\n{}    }} else {{\n{}    }}\n", comp_expr(cond), comp_ast(then_), comp_ast(else_))
         },
         Stmt::Print(e) => {
             format!("    puts(\"ok\");\n")
