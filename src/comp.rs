@@ -120,9 +120,9 @@ fn comp_expr_raw(e: &Expr) -> (String, LayoutType) {
         },
         Expr::BoolLit(b) => {
             if *b {
-                format!("mk_bool(true)")
+                return (format!("true"), LayoutType::Bool)
             } else {
-                format!("mk_bool(false)")
+                return (format!("false"), LayoutType::Bool)
             }
         },
         Expr::Var(v) => format!("{v}"),
