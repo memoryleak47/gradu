@@ -73,6 +73,11 @@ int to_int(Value v) {
     return v.payload.i;
 }
 
+bool to_bool(Value v) {
+    assert(v.tag == TAG_BOOL);
+    return v.payload.b;
+}
+
 bool is_equal(Value v1, Value v2) {
     if (v1.tag != v2.tag) { return false; }
     switch (v1.tag) {
