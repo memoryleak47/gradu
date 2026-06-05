@@ -2,7 +2,7 @@ use crate::*;
 use std::collections::HashSet;
 use std::process::Command;
 
-pub fn comp(ast: &AST) {
+pub fn comp(ast: &Body) {
     let tyctxt = ty_infer(ast);
     let compiled = comp_str(ast, &tyctxt);
     std::fs::write("gen.c", compiled).unwrap();
@@ -17,7 +17,7 @@ pub fn comp(ast: &AST) {
     println!("{out2}");
 }
 
-fn comp_str(ast: &AST, tyctxt: &TyCtxt) -> String {
+fn comp_str(ast: &Body, tyctxt: &TyCtxt) -> String {
     let preamble = include_str!("preamble.h");
 
     let mut varprefix = String::new();
@@ -54,7 +54,7 @@ fn get_vars_expr(expr: &Expr) -> HashSet<String> {
     vars
 }
 
-pub fn get_vars(ast: &AST) -> HashSet<String> {
+pub fn get_vars(ast: &Body) -> HashSet<String> {
     let mut vars = HashSet::new();
     for st in ast {
         match st {
@@ -195,7 +195,7 @@ fn comp_stmt(stmt: &Stmt, tyctxt: &TyCtxt, level: usize) -> String {
 }
 
 
-fn comp_ast(ast: &AST, tyctxt: &TyCtxt, level: usize) -> String {
+fn comp_ast(ast: &Body, tyctxt: &TyCtxt, level: usize) -> String {
     let mut out = String::new();
     for stmt in ast {
         out.push_str(&comp_stmt(stmt, tyctxt, level));

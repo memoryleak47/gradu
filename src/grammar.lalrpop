@@ -4,13 +4,37 @@ use crate::ast::*;
 grammar;
 
 pub AST: AST = {
+    <items:Item*> => {
+        let mut ast = AST { fns: Vec::new(), body: Vec::new() };
+        for x in items {
+            match x {
+                Ok(x) => ast.fns.push(x),
+                Err(x) => ast.body.push(x),
+            }
+        }
+        ast
+    }
+};
+
+pub Item: Result<FnDef, Stmt> = {
+    <x:FnDef> => Ok(x),
+    <x:Stmt> => Err(x),
+};
+
+pub FnDef: FnDef = {
+    "fn" <name:Ident> "(" <args:Args> ")" "{" <body:Body> "}" => FnDef { name, args, body },
+};
+
+pub Args: Vec<String> = Comma<Ident>;
+
+pub Body: Body = {
     <s:Stmt*> => s,
 };
 
 pub Expr: Expr = {
     <n:Num> => Expr::IntLit(n),
-    <s:Str> => Expr::StringLit(s.to_string()),
-    <i:Ident> => Expr::Var(i.to_string()),
+    <s:Str> => Expr::StringLit(s),
+    <i:Ident> => Expr::Var(i),
     "(" <e1:Expr> <binop:BinOp> <e2:Expr> ")" => Expr::BinOp(binop, Box::new(e1), Box::new(e2)),
     "(" <e:Expr> ")" => e,
     "input" "()" => Expr::Input,
@@ -27,12 +51,22 @@ pub BinOp: BinOpKind = {
 }
 
 pub Stmt: Stmt = {
-    <v:Ident> "=" <e:Expr> ";" => Stmt::Assign(v.to_string(), e),
+    <v:Ident> "=" <e:Expr> ";" => Stmt::Assign(v, e),
     "print" "(" <e:Expr> ")" ";" => Stmt::Print(e),
-    "if" <c: Expr> "{" <then_:AST> "}" "else" "{" <else_:AST> "}" => Stmt::If(c, then_, else_),
-    "while" <c: Expr> "{" <body:AST> "}" => Stmt::While(c, body),
+    "if" <c: Expr> "{" <then_:Body> "}" "else" "{" <else_:Body> "}" => Stmt::If(c, then_, else_),
+    "while" <c: Expr> "{" <body:Body> "}" => Stmt::While(c, body),
+};
+
+Comma<T>: Vec<T> = {
+    <mut v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
 };
 
 Num: i64 = <s:r"[0-9]+"> => i64::from_str(s).unwrap();
-Str: &'input str = <s:r#""[^"]*""#> => &s[1..s.len()-1];
-Ident: &'input str = r"[a-zA-Z_][a-zA-Z0-9_]*" => <>;
+Str: String = <s:r#""[^"]*""#> => s[1..s.len()-1].to_string();
+Ident: String = r"[a-zA-Z_][a-zA-Z0-9_]*" => <>.to_string();

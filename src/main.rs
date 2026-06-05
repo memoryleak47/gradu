@@ -16,9 +16,9 @@ pub use ty::*;
 use std::collections::HashMap;
 
 fn main() {
-    let s = include_str!("../examples/isprime.gradu");
+    let s = include_str!("../examples/factorial.gradu");
     let ast = parse(&s);
 
-    // interp::interp(&ast);
+    interp::interp(&ast);
     comp::comp(&ast);
 }

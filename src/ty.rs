@@ -20,7 +20,7 @@ pub enum LayoutType {
 pub type TyCtxt = HashMap<String, LayoutType>;
 type TyLatticeCtxt = HashMap<String, TypeLattice>;
 
-pub fn ty_infer(ast: &AST) -> TyCtxt {
+pub fn ty_infer(ast: &Body) -> TyCtxt {
     let m = &mut HashMap::new();
 
     // After 5 rounds, we have to have converged!
@@ -36,7 +36,7 @@ pub fn ty_infer(ast: &AST) -> TyCtxt {
     out
 }
 
-fn ty_infer_ast(ast: &AST, ctxt: &mut TyLatticeCtxt) {
+fn ty_infer_ast(ast: &Body, ctxt: &mut TyLatticeCtxt) {
     for st in ast {
         ty_infer_stmt(st, ctxt);
     }

@@ -94,12 +94,12 @@ fn exec_stmt(stmt: &Stmt, ctxt: &mut Ctxt) {
     }
 }
 
-fn exec_ast(ast: &AST, ctxt: &mut Ctxt) {
+fn exec_ast(ast: &Body, ctxt: &mut Ctxt) {
     for x in ast {
         exec_stmt(x, ctxt);
     }
 }
 
-pub fn interp(ast: &AST) {
+pub fn interp(ast: &Body) {
     exec_ast(ast, &mut Ctxt::default());
 }

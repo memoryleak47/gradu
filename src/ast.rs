@@ -1,10 +1,23 @@
-pub type AST = Vec<Stmt>;
+pub type Body = Vec<Stmt>;
+
+pub struct AST {
+    pub fns: Vec<FnDef>,
+    pub body: Body,
+}
+
+pub struct FnDef {
+    pub name: String,
+    pub args: Vec<String>,
+    pub body: Body,
+}
 
 #[derive(Debug)]
 pub enum Stmt {
+    // Global(/*var*/String),
+    // Return(Expr),
     Assign(String, Expr),
-    If(Expr, /*then*/ AST, /*else*/ AST),
-    While(Expr, AST),
+    If(Expr, /*then*/ Body, /*else*/ Body),
+    While(Expr, Body),
     Print(Expr),
 }
 
