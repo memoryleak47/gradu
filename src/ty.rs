@@ -8,7 +8,7 @@ pub struct TypeLattice {
     might_be_int: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LayoutType {
     Bool,
     Nil,
@@ -17,62 +17,88 @@ pub enum LayoutType {
     Value, // "any"
 }
 
-pub type TyCtxt = HashMap<String, LayoutType>;
-type TyLatticeCtxt = HashMap<String, TypeLattice>;
+pub type TyCtxt = HashMap<Location, LayoutType>;
+type TyLatticeCtxt = HashMap<Location, TypeLattice>;
+
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+pub enum Location {
+    Var(/*fn*/ String, /*var*/ String), // also includes fn args
+    RetVal(/*fn*/ String),
+}
 
 pub fn ty_infer(ast: &AST) -> TyCtxt {
-    let m = &mut HashMap::new();
+    let mut m = HashMap::new();
 
-    for f in &ast.fns {
-        let body = &f.body;
-
-        // After 5 rounds, we have to have converged!
-        for _ in 0..5 {
-            ty_infer_ast(body, m);
+    // After 5 rounds, we have to have converged!
+    for _ in 0..5 {
+        for f in &ast.fns {
+            ty_infer_fn(f, ast, &mut m);
         }
     }
 
-    let mut out = HashMap::new();
-    for v in get_vars(ast) {
-        let ty = get_var(&v, m);
-        out.insert(v.to_string(), layout(ty));
-    }
-    out
+    m.into_iter()
+     .map(|(v, ty)| (v, layout(ty)))
+     .collect()
 }
 
-fn ty_infer_ast(ast: &Body, ctxt: &mut TyLatticeCtxt) {
-    for st in ast {
-        ty_infer_stmt(st, ctxt);
+fn ty_infer_fn(f: &FnDef, ast: &AST, ctxt: &mut TyLatticeCtxt) {
+    ty_infer_body(&f.body, &f.name, ast, ctxt);
+}
+
+fn ty_infer_body(body: &Body, fname: &str, ast: &AST, ctxt: &mut TyLatticeCtxt) {
+    for st in body {
+        ty_infer_stmt(st, fname, ast, ctxt);
     }
 }
 
-fn ty_infer_stmt(stmt: &Stmt, ctxt: &mut TyLatticeCtxt) {
+fn ty_infer_stmt(stmt: &Stmt, fname: &str, ast: &AST, ctxt: &mut TyLatticeCtxt) {
     match stmt {
         Stmt::Assign(v, e) => {
-            let l = get_var(v, ctxt);
-            let r = ty_infer_expr(e, ctxt);
-            ctxt.insert(v.to_string(), TypeLattice::merge(l, r));
+            let r = ty_infer_expr(e, fname, ast, ctxt);
+            let l = Location::Var(fname.to_string(), v.to_string());
+            add(l, r, ctxt);
         },
-        Stmt::Return(e) => {}, // TODO
+        Stmt::Return(e) => {
+            let r = ty_infer_expr(e, fname, ast, ctxt);
+            let l = Location::RetVal(fname.to_string());
+            add(l, r, ctxt);
+        },
         Stmt::If(_, then_, else_) => {
-            ty_infer_ast(then_, ctxt);
-            ty_infer_ast(else_, ctxt);
+            ty_infer_body(then_, fname, ast, ctxt);
+            ty_infer_body(else_, fname, ast, ctxt);
         },
         Stmt::While(_, body) => {
-            ty_infer_ast(body, ctxt);
+            ty_infer_body(body, fname, ast, ctxt);
         },
         Stmt::Print(_) => {},
     }
 }
 
-fn get_var(v: &str, ctxt: &TyLatticeCtxt) -> TypeLattice {
-    ctxt.get(v).cloned().unwrap_or(TypeLattice::bot())
+fn get(v: Location, ctxt: &mut TyLatticeCtxt) -> TypeLattice {
+    ctxt.entry(v)
+        .or_insert(TypeLattice::bot())
+        .clone()
 }
 
-fn ty_infer_expr(expr: &Expr, ctxt: &TyLatticeCtxt) -> TypeLattice {
+fn add(v: Location, ty: TypeLattice, ctxt: &mut TyLatticeCtxt) {
+    let ty2 = get(v.clone(), ctxt);
+    let ty = TypeLattice::merge(ty, ty2);
+    ctxt.insert(v, ty);
+}
+
+fn ty_infer_expr(expr: &Expr, fname: &str, ast: &AST, ctxt: &mut TyLatticeCtxt) -> TypeLattice {
     match expr {
-        Expr::FnCall(_f, _args) => {
-            todo!()
+        Expr::FnCall(f, args) => {
+            let fndef = &ast.fns.iter().find(|x| &x.name == f).unwrap();
+
+            for (argname, argexpr) in fndef.args.iter().zip(args) {
+                let argexpr_ty = ty_infer_expr(argexpr, fname, ast, ctxt);
+                let l = Location::Var(f.to_string(), argname.to_string());
+                add(l, argexpr_ty, ctxt);
+            }
+
+            let l = Location::RetVal(f.to_string());
+            get(l, ctxt)
         },
         Expr::BinOp(kind, _, _) => {
             match kind {
@@ -85,7 +111,10 @@ fn ty_infer_expr(expr: &Expr, ctxt: &TyLatticeCtxt) -> TypeLattice {
         Expr::IntLit(_) => TypeLattice { might_be_int: true, ..TypeLattice::bot() },
         Expr::StringLit(_) => TypeLattice { might_be_str: true, ..TypeLattice::bot() },
         Expr::BoolLit(_) => TypeLattice { might_be_bool: true, ..TypeLattice::bot() },
-        Expr::Var(v) => get_var(v, ctxt),
+        Expr::Var(v) => {
+            let l = Location::Var(fname.to_string(), v.to_string());
+            get(l, ctxt)
+        }
         Expr::Input => TypeLattice::top(),
     }
 }

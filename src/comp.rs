@@ -18,6 +18,7 @@ pub fn comp(ast: &AST) {
 
 fn compile_ast(ast: &AST) -> String {
     let tyctxt = ty_infer(ast);
+    dbg!(&tyctxt);
 
     let mut compiled = String::from(include_str!("preamble.h"));
     for f in &ast.fns {
@@ -29,38 +30,53 @@ fn compile_ast(ast: &AST) -> String {
     compiled
 }
 
+fn stringify_layout(ty: LayoutType) -> String {
+    String::from(match ty {
+        LayoutType::Value => "Value",
+        LayoutType::Int => "int",
+        LayoutType::Bool => "bool",
+        LayoutType::Str => "char*",
+        LayoutType::Nil => panic!(),
+    })
+}
+
 fn compile_fn(f: &FnDef, tyctxt: &TyCtxt) -> String {
     let name = &f.name;
-    let mut varprefix = String::new();
-    for (x, ty) in tyctxt.iter() {
-        if !f.args.contains(&x) {
-            let ty = match ty {
-                LayoutType::Value => "Value",
-                LayoutType::Int => "int",
-                LayoutType::Bool => "bool",
-                LayoutType::Str => "char*",
-                LayoutType::Nil => panic!(),
-            };
-            varprefix.push_str(&format!("    {ty} {x};\n"));
-        }
-    }
 
-    let body_s = comp_body(&f.body, tyctxt, 0);
+    // retval
+    let retval = tyctxt.get(&Location::RetVal(f.name.to_string())).unwrap().clone();
+    let retval = stringify_layout(retval);
+
+    // args
     let mut args_s = String::new();
-
     for (i, arg) in f.args.iter().enumerate() {
-        args_s.push_str(&format!("Value {arg}"));
+        let l = Location::Var(f.name.to_string(), arg.to_string());
+        let argty = tyctxt[&l];
+        let argty = stringify_layout(argty);
+        args_s.push_str(&format!("{argty} {arg}"));
         if i != f.args.len() - 1 {
             args_s.push_str(", ");
         }
     }
 
-    format!("Value fn_{name}({args_s}) {{\n{varprefix}\n{body_s}}}\n\n")
+    // local vars
+    let mut varprefix = String::new();
+    for (loc, varty) in tyctxt.iter() {
+        if let Location::Var(ff, x) = loc && ff == name && !f.args.contains(x) {
+            let varty = stringify_layout(*varty);
+            varprefix.push_str(&format!("    {varty} {x};\n"));
+        }
+    }
+
+    // body
+    let body_s = comp_body(&f.body, name, tyctxt, 0);
+
+    format!("{retval} fn_{name}({args_s}) {{\n{varprefix}\n{body_s}}}\n\n")
 }
 
 // always produces "Value" type
-fn comp_expr(e: &Expr, tyctxt: &TyCtxt) -> String {
-    let (s, ty) = comp_expr_raw(e, tyctxt);
+fn comp_expr(e: &Expr, fname: &str, tyctxt: &TyCtxt) -> String {
+    let (s, ty) = comp_expr_raw(e, fname, tyctxt);
     type_cast_to_value(s, ty)
 }
 
@@ -100,16 +116,16 @@ fn comp_equ(e1: String, t1: LayoutType, e2: String, t2: LayoutType) -> String {
     format!("is_equal({e1}, {e2})")
 }
 
-fn comp_expr_raw(e: &Expr, tyctxt: &TyCtxt) -> (String, LayoutType) {
+fn comp_expr_raw(e: &Expr, fname: &str, tyctxt: &TyCtxt) -> (String, LayoutType) {
     match e {
         Expr::FnCall(f, args) => {
-            let args = args.iter().map(|x| comp_expr(x, tyctxt)).collect::<Vec<_>>();
+            let args = args.iter().map(|x| comp_expr(x, fname, tyctxt)).collect::<Vec<_>>();
             let args = args.join(", ");
             (format!("fn_{f}({args})"), LayoutType::Value)
         },
         Expr::BinOp(op, e1, e2) => {
-            let (e1, t1) = comp_expr_raw(e1, tyctxt);
-            let (e2, t2) = comp_expr_raw(e2, tyctxt);
+            let (e1, t1) = comp_expr_raw(e1, fname, tyctxt);
+            let (e2, t2) = comp_expr_raw(e2, fname, tyctxt);
             if let BinOpKind::Equ = op {
                 return (comp_equ(e1, t1, e2, t2), LayoutType::Bool)
             }
@@ -150,49 +166,53 @@ fn comp_expr_raw(e: &Expr, tyctxt: &TyCtxt) -> (String, LayoutType) {
                 (format!("false"), LayoutType::Bool)
             }
         },
-        Expr::Var(v) => (format!("{v}"), tyctxt[v]),
+        Expr::Var(v) => {
+            let l = Location::Var(fname.to_string(), v.to_string());
+            (format!("{v}"), tyctxt[&l])
+        },
         Expr::Input => {
             (format!("input()"), LayoutType::Value)
         },
     }
 }
 
-fn comp_stmt(stmt: &Stmt, tyctxt: &TyCtxt, level: usize) -> String {
+fn comp_stmt(stmt: &Stmt, fname: &str, tyctxt: &TyCtxt, level: usize) -> String {
     let spaces = "    ".repeat(level+1);
     match stmt {
         Stmt::Assign(v, e) => {
-            let (mut e, t) = comp_expr_raw(e, tyctxt);
-            if t != tyctxt[&*v] {
+            let (mut e, t) = comp_expr_raw(e, fname, tyctxt);
+            let l = Location::Var(fname.to_string(), v.to_string());
+            if t != tyctxt[&l] {
                 e = type_cast_to_value(e, t);
             }
             format!("{spaces}{v} = {e};\n")
         },
         Stmt::Return(e) => {
-            let e = comp_expr(e, tyctxt);
+            let e = comp_expr(e, fname, tyctxt);
             format!("{spaces}return {e};\n")
         },
         Stmt::If(cond, then_, else_) => {
-            let (cond, tcond) = comp_expr_raw(cond, tyctxt);
+            let (cond, tcond) = comp_expr_raw(cond, fname, tyctxt);
             let cond = type_cast_to_bool(cond, tcond);
-            format!("{spaces}if ({}) {{\n{}{spaces}}} else {{\n{}{spaces}}}\n", cond, comp_body(then_, tyctxt, level+1), comp_body(else_, tyctxt, level+1))
+            format!("{spaces}if ({}) {{\n{}{spaces}}} else {{\n{}{spaces}}}\n", cond, comp_body(then_, fname, tyctxt, level+1), comp_body(else_, fname, tyctxt, level+1))
         },
         Stmt::While(cond, body) => {
-            let (cond, tcond) = comp_expr_raw(cond, tyctxt);
+            let (cond, tcond) = comp_expr_raw(cond, fname, tyctxt);
             let cond = type_cast_to_bool(cond, tcond);
-            format!("{spaces}while ({}) {{\n{}{spaces}}}\n", cond, comp_body(body, tyctxt, level+1))
+            format!("{spaces}while ({}) {{\n{}{spaces}}}\n", cond, comp_body(body, fname, tyctxt, level+1))
         },
         Stmt::Print(e) => {
-            let e = comp_expr(e, tyctxt);
+            let e = comp_expr(e, fname, tyctxt);
             format!("{spaces}print_value({e});\n")
         },
     }
 }
 
 
-fn comp_body(body: &Body, tyctxt: &TyCtxt, level: usize) -> String {
+fn comp_body(body: &Body, fname: &str, tyctxt: &TyCtxt, level: usize) -> String {
     let mut out = String::new();
     for stmt in body {
-        out.push_str(&comp_stmt(stmt, tyctxt, level));
+        out.push_str(&comp_stmt(stmt, fname, tyctxt, level));
     }
     out
 }

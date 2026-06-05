@@ -7,9 +7,6 @@ pub use interp::*;
 mod comp;
 pub use comp::*;
 
-mod vars;
-pub use vars::*;
-
 mod parse;
 pub use parse::*;
 
