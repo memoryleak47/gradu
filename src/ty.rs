@@ -29,6 +29,7 @@ pub enum Location {
 pub fn ty_infer(ast: &AST) -> TyCtxt {
     let mut m = HashMap::new();
 
+    // TODO this is a hack to initialize `m` at every location.
     for f in &ast.fns {
         let l = Location::RetVal(f.name);
         let _ = get(l, &mut m);
