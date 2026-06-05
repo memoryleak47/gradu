@@ -73,12 +73,6 @@ fn compile_fn(f: &FnDef, ast: &AST, tyctxt: &TyCtxt) -> String {
     format!("{retval} fn_{name}({args_s}) {{\n{varprefix}\n{body_s}}}\n\n")
 }
 
-// always produces "Value" type
-fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> String {
-    let (s, ty) = comp_expr_raw(e, fname, ast, tyctxt);
-    type_cast_to_value(s, ty)
-}
-
 fn type_cast_to_value(e: String, old: LayoutType) -> String {
     match old {
         LayoutType::Bool => format!("mk_bool({e})"),
@@ -125,13 +119,13 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
     }
 }
 
-fn comp_expr_raw(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, LayoutType) {
+fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, LayoutType) {
     match e {
         Expr::FnCall(f, args) => {
             let ff = ast.fns.iter().find(|x| &x.name == f).unwrap();
             let mut args_str = String::new();
             for (i, (x, e)) in ff.args.iter().zip(args).enumerate() {
-                let (e, y_ty) = comp_expr_raw(e, fname, ast, tyctxt);
+                let (e, y_ty) = comp_expr(e, fname, ast, tyctxt);
                 let l = Location::Var(*f, *x);
                 let real_ty = tyctxt[&l];
                 let out = type_cast_to(e, y_ty, real_ty);
@@ -145,8 +139,8 @@ fn comp_expr_raw(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String
             (format!("fn_{f}({args_str})"), tyctxt[&l])
         },
         Expr::BinOp(op, e1, e2) => {
-            let (e1, t1) = comp_expr_raw(e1, fname, ast, tyctxt);
-            let (e2, t2) = comp_expr_raw(e2, fname, ast, tyctxt);
+            let (e1, t1) = comp_expr(e1, fname, ast, tyctxt);
+            let (e2, t2) = comp_expr(e2, fname, ast, tyctxt);
             if let BinOpKind::Equ = op {
                 return (comp_equ(e1, t1, e2, t2), LayoutType::Bool)
             }
@@ -201,7 +195,7 @@ fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usiz
     let spaces = "    ".repeat(level+1);
     match stmt {
         Stmt::Assign(v, e) => {
-            let (mut e, t) = comp_expr_raw(e, fname, ast, tyctxt);
+            let (mut e, t) = comp_expr(e, fname, ast, tyctxt);
             let l = Location::Var(fname, *v);
             if t != tyctxt[&l] {
                 e = type_cast_to_value(e, t);
@@ -209,7 +203,7 @@ fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usiz
             format!("{spaces}{v} = {e};\n")
         },
         Stmt::Return(e) => {
-            let (mut e, ty) = comp_expr_raw(e, fname, ast, tyctxt);
+            let (mut e, ty) = comp_expr(e, fname, ast, tyctxt);
             let l = Location::RetVal(fname);
             if ty != tyctxt[&l] {
                 e = type_cast_to_value(e, ty);
@@ -217,17 +211,18 @@ fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usiz
             format!("{spaces}return {e};\n")
         },
         Stmt::If(cond, then_, else_) => {
-            let (cond, tcond) = comp_expr_raw(cond, fname, ast, tyctxt);
+            let (cond, tcond) = comp_expr(cond, fname, ast, tyctxt);
             let cond = type_cast_to_bool(cond, tcond);
             format!("{spaces}if ({}) {{\n{}{spaces}}} else {{\n{}{spaces}}}\n", cond, comp_body(then_, fname, ast, tyctxt, level+1), comp_body(else_, fname, ast, tyctxt, level+1))
         },
         Stmt::While(cond, body) => {
-            let (cond, tcond) = comp_expr_raw(cond, fname, ast, tyctxt);
+            let (cond, tcond) = comp_expr(cond, fname, ast, tyctxt);
             let cond = type_cast_to_bool(cond, tcond);
             format!("{spaces}while ({}) {{\n{}{spaces}}}\n", cond, comp_body(body, fname, ast, tyctxt, level+1))
         },
         Stmt::Print(e) => {
-            let e = comp_expr(e, fname, ast, tyctxt);
+            let (s, ty) = comp_expr(e, fname, ast, tyctxt);
+            let e = type_cast_to_value(s, ty);
             format!("{spaces}print_value({e});\n")
         },
     }
