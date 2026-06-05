@@ -40,10 +40,16 @@ pub Body: Body = {
 };
 
 pub Expr: Expr = {
+    <e:SafeExpr> => e,
+    <e1:SafeExpr> <binop:BinOp> <e2:SafeExpr> => Expr::BinOp(binop, Box::new(e1), Box::new(e2)),
+};
+
+// SafeExpr is an Expr that can only be "parsed in one way" in any context.
+// A non-safe Expr is something like `a + b`, as `c*a + b` will be parsed wrongly.
+pub SafeExpr: Expr = {
     <n:Num> => Expr::IntLit(n),
     <s:Str> => Expr::StringLit(s),
     <i:Ident> => Expr::Var(i),
-    "(" <e1:Expr> <binop:BinOp> <e2:Expr> ")" => Expr::BinOp(binop, Box::new(e1), Box::new(e2)),
     "(" <e:Expr> ")" => e,
     "input" "()" => Expr::Input,
     "true" => Expr::BoolLit(true),

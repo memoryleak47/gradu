@@ -9,7 +9,7 @@ if (x < 2) {
             isprime = false;
             i = x;
         } else {
-            i = (i+1);
+            i = i+1;
         }
     }
 }
