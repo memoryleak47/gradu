@@ -2,7 +2,6 @@ pub type Body = Vec<Stmt>;
 
 pub struct AST {
     pub fns: Vec<FnDef>,
-    pub body: Body,
 }
 
 pub struct FnDef {
@@ -13,8 +12,7 @@ pub struct FnDef {
 
 #[derive(Debug)]
 pub enum Stmt {
-    // Global(/*var*/String),
-    // Return(Expr),
+    Return(Expr),
     Assign(String, Expr),
     If(Expr, /*then*/ Body, /*else*/ Body),
     While(Expr, Body),
@@ -29,6 +27,7 @@ pub enum Expr {
     BoolLit(bool),
     Var(String),
     Input,
+    FnCall(String, Vec<Expr>),
 }
 
 #[derive(Debug)]

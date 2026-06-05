@@ -5,14 +5,22 @@ grammar;
 
 pub AST: AST = {
     <items:Item*> => {
-        let mut ast = AST { fns: Vec::new(), body: Vec::new() };
+        let mut main_body = Vec::new();
+        let mut fns = Vec::new();
         for x in items {
             match x {
-                Ok(x) => ast.fns.push(x),
-                Err(x) => ast.body.push(x),
+                Ok(x) => fns.push(x),
+                Err(x) => main_body.push(x),
             }
         }
-        ast
+        fns.push(FnDef {
+            name: "main".to_string(),
+            args: Vec::new(),
+            body: main_body
+        });
+        AST {
+            fns,
+        }
     }
 };
 
@@ -40,6 +48,7 @@ pub Expr: Expr = {
     "input" "()" => Expr::Input,
     "true" => Expr::BoolLit(true),
     "false" => Expr::BoolLit(false),
+    <f:Ident> "(" <args:Comma<Expr>> ")" => Expr::FnCall(f, args),
 };
 
 pub BinOp: BinOpKind = {
@@ -54,7 +63,8 @@ pub Stmt: Stmt = {
     <v:Ident> "=" <e:Expr> ";" => Stmt::Assign(v, e),
     "print" "(" <e:Expr> ")" ";" => Stmt::Print(e),
     "if" <c: Expr> "{" <then_:Body> "}" "else" "{" <else_:Body> "}" => Stmt::If(c, then_, else_),
-    "while" <c: Expr> "{" <body:Body> "}" => Stmt::While(c, body),
+    "while" <c:Expr> "{" <body:Body> "}" => Stmt::While(c, body),
+    "return" <e:Expr> ";" => Stmt::Return(e),
 };
 
 Comma<T>: Vec<T> = {
