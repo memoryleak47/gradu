@@ -1,3 +1,5 @@
+use crate::*;
+
 pub type Body = Vec<Stmt>;
 
 pub struct AST {
@@ -5,15 +7,15 @@ pub struct AST {
 }
 
 pub struct FnDef {
-    pub name: String,
-    pub args: Vec<String>,
+    pub name: Symbol,
+    pub args: Vec<Symbol>,
     pub body: Body,
 }
 
 #[derive(Debug)]
 pub enum Stmt {
     Return(Expr),
-    Assign(String, Expr),
+    Assign(Symbol, Expr),
     If(Expr, /*then*/ Body, /*else*/ Body),
     While(Expr, Body),
     Print(Expr),
@@ -25,9 +27,9 @@ pub enum Expr {
     IntLit(i64),
     StringLit(String),
     BoolLit(bool),
-    Var(String),
+    Var(Symbol),
     Input,
-    FnCall(String, Vec<Expr>),
+    FnCall(Symbol, Vec<Expr>),
 }
 
 #[derive(Debug)]

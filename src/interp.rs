@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use crate::ast::*;
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Value {
@@ -9,11 +8,11 @@ enum Value {
     Nil,
 }
 
-fn eval_expr(e: &Expr, vars: &mut HashMap<String, Value>, ast: &AST) -> Value {
+fn eval_expr(e: &Expr, vars: &mut HashMap<Symbol, Value>, ast: &AST) -> Value {
     match e {
         Expr::FnCall(f, args) => {
             let args = args.iter().map(|x| eval_expr(x, vars, ast)).collect::<Vec<_>>();
-            call_fn(f, args, ast)
+            call_fn(*f, args, ast)
         },
         Expr::BinOp(op, e1, e2) => {
             let e1 = eval_expr(e1, vars, ast);
@@ -61,7 +60,7 @@ fn eval_expr(e: &Expr, vars: &mut HashMap<String, Value>, ast: &AST) -> Value {
     }
 }
 
-fn exec_stmt(stmt: &Stmt, vars: &mut HashMap<String, Value>, ast: &AST) -> Result<(), /*retval*/ Value> {
+fn exec_stmt(stmt: &Stmt, vars: &mut HashMap<Symbol, Value>, ast: &AST) -> Result<(), /*retval*/ Value> {
     match stmt {
         Stmt::Return(e) => {
             let val = eval_expr(e, vars, ast);
@@ -69,7 +68,7 @@ fn exec_stmt(stmt: &Stmt, vars: &mut HashMap<String, Value>, ast: &AST) -> Resul
         },
         Stmt::Assign(v, e) => {
             let val = eval_expr(e, vars, ast);
-            vars.insert(v.to_string(), val);
+            vars.insert(*v, val);
         },
         Stmt::If(cond, then_, else_) => {
             let Value::Bool(cond) = eval_expr(cond, vars, ast) else {
@@ -102,19 +101,19 @@ fn exec_stmt(stmt: &Stmt, vars: &mut HashMap<String, Value>, ast: &AST) -> Resul
     Ok(())
 }
 
-fn exec_body(body: &Body, vars: &mut HashMap<String, Value>, ast: &AST) -> Result<(), Value> {
+fn exec_body(body: &Body, vars: &mut HashMap<Symbol, Value>, ast: &AST) -> Result<(), Value> {
     for x in body {
         exec_stmt(x, vars, ast)?;
     }
     Ok(())
 }
 
-fn call_fn(name: &str, args: Vec<Value>, ast: &AST) -> Value {
+fn call_fn(name: Symbol, args: Vec<Value>, ast: &AST) -> Value {
     let f = ast.fns.iter().find(|x| x.name == name).unwrap();
 
-    let mut vars = HashMap::new();
+    let mut vars: HashMap<Symbol, Value> = HashMap::new();
     for (var, val) in f.args.iter().zip(args.into_iter()) {
-        vars.insert(var.to_string(), val);
+        vars.insert(*var, val);
     }
 
     if let Err(v) = exec_body(&f.body, &mut vars, ast) { return v }
@@ -122,5 +121,5 @@ fn call_fn(name: &str, args: Vec<Value>, ast: &AST) -> Value {
 }
 
 pub fn interp(ast: &AST) {
-    call_fn("main", Vec::new(), ast);
+    call_fn(Symbol::new("main"), Vec::new(), ast);
 }

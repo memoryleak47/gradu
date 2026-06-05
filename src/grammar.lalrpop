@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::ast::*;
+use crate::*;
 
 grammar;
 
@@ -14,7 +14,7 @@ pub AST: AST = {
             }
         }
         fns.push(FnDef {
-            name: "main".to_string(),
+            name: Symbol::new("main"),
             args: Vec::new(),
             body: main_body
         });
@@ -33,7 +33,7 @@ pub FnDef: FnDef = {
     "fn" <name:Ident> "(" <args:Args> ")" "{" <body:Body> "}" => FnDef { name, args, body },
 };
 
-pub Args: Vec<String> = Comma<Ident>;
+pub Args: Vec<Symbol> = Comma<Ident>;
 
 pub Body: Body = {
     <s:Stmt*> => s,
@@ -81,4 +81,4 @@ Comma<T>: Vec<T> = {
 
 Num: i64 = <s:r"[0-9]+"> => i64::from_str(s).unwrap();
 Str: String = <s:r#""[^"]*""#> => s[1..s.len()-1].to_string();
-Ident: String = r"[a-zA-Z_][a-zA-Z0-9_]*" => <>.to_string();
+Ident: Symbol = r"[a-zA-Z_][a-zA-Z0-9_]*" => Symbol::new(<>);

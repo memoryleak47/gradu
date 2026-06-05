@@ -40,16 +40,16 @@ fn stringify_layout(ty: LayoutType) -> String {
 }
 
 fn compile_fn(f: &FnDef, ast: &AST, tyctxt: &TyCtxt) -> String {
-    let name = &f.name;
+    let name = f.name;
 
     // retval
-    let retval = tyctxt.get(&Location::RetVal(f.name.to_string())).unwrap().clone();
+    let retval = tyctxt.get(&Location::RetVal(f.name)).unwrap().clone();
     let retval = stringify_layout(retval);
 
     // args
     let mut args_s = String::new();
     for (i, arg) in f.args.iter().enumerate() {
-        let l = Location::Var(f.name.to_string(), arg.to_string());
+        let l = Location::Var(f.name, *arg);
         let argty = tyctxt[&l];
         let argty = stringify_layout(argty);
         args_s.push_str(&format!("{argty} {arg}"));
@@ -61,7 +61,7 @@ fn compile_fn(f: &FnDef, ast: &AST, tyctxt: &TyCtxt) -> String {
     // local vars
     let mut varprefix = String::new();
     for (loc, varty) in tyctxt.iter() {
-        if let Location::Var(ff, x) = loc && ff == name && !f.args.contains(x) {
+        if let Location::Var(ff, x) = loc && *ff == name && !f.args.contains(x) {
             let varty = stringify_layout(*varty);
             varprefix.push_str(&format!("    {varty} {x};\n"));
         }
@@ -74,7 +74,7 @@ fn compile_fn(f: &FnDef, ast: &AST, tyctxt: &TyCtxt) -> String {
 }
 
 // always produces "Value" type
-fn comp_expr(e: &Expr, fname: &str, ast: &AST, tyctxt: &TyCtxt) -> String {
+fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> String {
     let (s, ty) = comp_expr_raw(e, fname, ast, tyctxt);
     type_cast_to_value(s, ty)
 }
@@ -125,14 +125,14 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
     }
 }
 
-fn comp_expr_raw(e: &Expr, fname: &str, ast: &AST, tyctxt: &TyCtxt) -> (String, LayoutType) {
+fn comp_expr_raw(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, LayoutType) {
     match e {
         Expr::FnCall(f, args) => {
             let ff = ast.fns.iter().find(|x| &x.name == f).unwrap();
             let mut args_str = String::new();
             for (i, (x, e)) in ff.args.iter().zip(args).enumerate() {
                 let (e, y_ty) = comp_expr_raw(e, fname, ast, tyctxt);
-                let l = Location::Var(f.to_string(), x.to_string());
+                let l = Location::Var(*f, *x);
                 let real_ty = tyctxt[&l];
                 let out = type_cast_to(e, y_ty, real_ty);
                 args_str.push_str(&out);
@@ -141,7 +141,7 @@ fn comp_expr_raw(e: &Expr, fname: &str, ast: &AST, tyctxt: &TyCtxt) -> (String, 
                 }
             }
 
-            let l = Location::RetVal(f.to_string());
+            let l = Location::RetVal(*f);
             (format!("fn_{f}({args_str})"), tyctxt[&l])
         },
         Expr::BinOp(op, e1, e2) => {
@@ -188,7 +188,7 @@ fn comp_expr_raw(e: &Expr, fname: &str, ast: &AST, tyctxt: &TyCtxt) -> (String, 
             }
         },
         Expr::Var(v) => {
-            let l = Location::Var(fname.to_string(), v.to_string());
+            let l = Location::Var(fname, *v);
             (format!("{v}"), tyctxt[&l])
         },
         Expr::Input => {
@@ -197,12 +197,12 @@ fn comp_expr_raw(e: &Expr, fname: &str, ast: &AST, tyctxt: &TyCtxt) -> (String, 
     }
 }
 
-fn comp_stmt(stmt: &Stmt, fname: &str, ast: &AST, tyctxt: &TyCtxt, level: usize) -> String {
+fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usize) -> String {
     let spaces = "    ".repeat(level+1);
     match stmt {
         Stmt::Assign(v, e) => {
             let (mut e, t) = comp_expr_raw(e, fname, ast, tyctxt);
-            let l = Location::Var(fname.to_string(), v.to_string());
+            let l = Location::Var(fname, *v);
             if t != tyctxt[&l] {
                 e = type_cast_to_value(e, t);
             }
@@ -210,7 +210,7 @@ fn comp_stmt(stmt: &Stmt, fname: &str, ast: &AST, tyctxt: &TyCtxt, level: usize)
         },
         Stmt::Return(e) => {
             let (mut e, ty) = comp_expr_raw(e, fname, ast, tyctxt);
-            let l = Location::RetVal(fname.to_string());
+            let l = Location::RetVal(fname);
             if ty != tyctxt[&l] {
                 e = type_cast_to_value(e, ty);
             }
@@ -234,7 +234,7 @@ fn comp_stmt(stmt: &Stmt, fname: &str, ast: &AST, tyctxt: &TyCtxt, level: usize)
 }
 
 
-fn comp_body(body: &Body, fname: &str, ast: &AST, tyctxt: &TyCtxt, level: usize) -> String {
+fn comp_body(body: &Body, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usize) -> String {
     let mut out = String::new();
     for stmt in body {
         out.push_str(&comp_stmt(stmt, fname, ast, tyctxt, level));

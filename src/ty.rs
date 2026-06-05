@@ -22,19 +22,19 @@ type TyLatticeCtxt = HashMap<Location, TypeLattice>;
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum Location {
-    Var(/*fn*/ String, /*var*/ String), // also includes fn args
-    RetVal(/*fn*/ String),
+    Var(/*fn*/ Symbol, /*var*/ Symbol), // also includes fn args
+    RetVal(/*fn*/ Symbol),
 }
 
 pub fn ty_infer(ast: &AST) -> TyCtxt {
     let mut m = HashMap::new();
 
     for f in &ast.fns {
-        let l = Location::RetVal(f.name.to_string());
+        let l = Location::RetVal(f.name);
         let _ = get(l, &mut m);
 
         for arg in &f.args {
-            let l = Location::Var(f.name.to_string(), arg.to_string());
+            let l = Location::Var(f.name, *arg);
             let _ = get(l, &mut m);
         }
     }
@@ -52,25 +52,25 @@ pub fn ty_infer(ast: &AST) -> TyCtxt {
 }
 
 fn ty_infer_fn(f: &FnDef, ast: &AST, ctxt: &mut TyLatticeCtxt) {
-    ty_infer_body(&f.body, &f.name, ast, ctxt);
+    ty_infer_body(&f.body, f.name, ast, ctxt);
 }
 
-fn ty_infer_body(body: &Body, fname: &str, ast: &AST, ctxt: &mut TyLatticeCtxt) {
+fn ty_infer_body(body: &Body, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt) {
     for st in body {
         ty_infer_stmt(st, fname, ast, ctxt);
     }
 }
 
-fn ty_infer_stmt(stmt: &Stmt, fname: &str, ast: &AST, ctxt: &mut TyLatticeCtxt) {
+fn ty_infer_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt) {
     match stmt {
         Stmt::Assign(v, e) => {
             let r = ty_infer_expr(e, fname, ast, ctxt);
-            let l = Location::Var(fname.to_string(), v.to_string());
+            let l = Location::Var(fname, *v);
             add(l, r, ctxt);
         },
         Stmt::Return(e) => {
             let r = ty_infer_expr(e, fname, ast, ctxt);
-            let l = Location::RetVal(fname.to_string());
+            let l = Location::RetVal(fname);
             add(l, r, ctxt);
         },
         Stmt::If(c, then_, else_) => {
@@ -100,18 +100,18 @@ fn add(v: Location, ty: TypeLattice, ctxt: &mut TyLatticeCtxt) {
     ctxt.insert(v, ty);
 }
 
-fn ty_infer_expr(expr: &Expr, fname: &str, ast: &AST, ctxt: &mut TyLatticeCtxt) -> TypeLattice {
+fn ty_infer_expr(expr: &Expr, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt) -> TypeLattice {
     match expr {
         Expr::FnCall(f, args) => {
             let fndef = &ast.fns.iter().find(|x| &x.name == f).unwrap();
 
             for (argname, argexpr) in fndef.args.iter().zip(args) {
                 let argexpr_ty = ty_infer_expr(argexpr, fname, ast, ctxt);
-                let l = Location::Var(f.to_string(), argname.to_string());
+                let l = Location::Var(*f, *argname);
                 add(l, argexpr_ty, ctxt);
             }
 
-            let l = Location::RetVal(f.to_string());
+            let l = Location::RetVal(*f);
             get(l, ctxt)
         },
         Expr::BinOp(kind, l, r) => {
@@ -128,7 +128,7 @@ fn ty_infer_expr(expr: &Expr, fname: &str, ast: &AST, ctxt: &mut TyLatticeCtxt) 
         Expr::StringLit(_) => TypeLattice { might_be_str: true, ..TypeLattice::bot() },
         Expr::BoolLit(_) => TypeLattice { might_be_bool: true, ..TypeLattice::bot() },
         Expr::Var(v) => {
-            let l = Location::Var(fname.to_string(), v.to_string());
+            let l = Location::Var(fname, *v);
             get(l, ctxt)
         }
         Expr::Input => TypeLattice::top(),

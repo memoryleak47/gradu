@@ -13,6 +13,9 @@ pub use parse::*;
 mod ty;
 pub use ty::*;
 
+extern crate symbol_table;
+pub type Symbol = symbol_table::GlobalSymbol;
+
 use std::collections::HashMap;
 
 fn main() {
