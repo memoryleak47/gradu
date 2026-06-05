@@ -29,6 +29,16 @@ pub enum Location {
 pub fn ty_infer(ast: &AST) -> TyCtxt {
     let mut m = HashMap::new();
 
+    for f in &ast.fns {
+        let l = Location::RetVal(f.name.to_string());
+        let _ = get(l, &mut m);
+
+        for arg in &f.args {
+            let l = Location::Var(f.name.to_string(), arg.to_string());
+            let _ = get(l, &mut m);
+        }
+    }
+
     // After 5 rounds, we have to have converged!
     for _ in 0..5 {
         for f in &ast.fns {
