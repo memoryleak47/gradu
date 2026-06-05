@@ -73,39 +73,13 @@ fn compile_fn(f: &FnDef, ast: &AST, tyctxt: &TyCtxt) -> String {
     format!("{retval} fn_{name}({args_s}) {{\n{varprefix}\n{body_s}}}\n\n")
 }
 
-fn type_cast_to_value(e: String, old: LayoutType) -> String {
-    match old {
-        LayoutType::Bool => format!("mk_bool({e})"),
-        LayoutType::Nil => todo!(),
-        LayoutType::Str => format!("mk_str({e})"),
-        LayoutType::Int => format!("mk_int({e})"),
-        LayoutType::Value => e,
-    }
-}
-
-fn type_cast_to_int(e: String, old: LayoutType) -> String {
-    match old {
-        LayoutType::Int => e,
-        LayoutType::Value => format!("to_int({e})"),
-        _ => panic!(),
-    }
-}
-
-fn type_cast_to_bool(e: String, old: LayoutType) -> String {
-    match old {
-        LayoutType::Bool => e,
-        LayoutType::Value => format!("to_bool({e})"),
-        _ => panic!(),
-    }
-}
-
 fn comp_equ(e1: String, t1: LayoutType, e2: String, t2: LayoutType) -> String {
     if t1 == t2 && (t1 == LayoutType::Int || t1 == LayoutType::Bool) {
         return format!("({e1} == {e2})")
     }
 
-    let e1 = type_cast_to_value(e1, t1);
-    let e2 = type_cast_to_value(e2, t2);
+    let e1 = type_cast_to(e1, t1, LayoutType::Value);
+    let e2 = type_cast_to(e2, t2, LayoutType::Value);
     format!("is_equal({e1}, {e2})")
 }
 
@@ -113,10 +87,27 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
     if old == new {
         e
     } else if new == LayoutType::Value {
-        type_cast_to_value(e, old)
+        match old {
+            LayoutType::Bool => format!("mk_bool({e})"),
+            LayoutType::Int => format!("mk_int({e})"),
+            LayoutType::Value => unreachable!(),
+            _ => panic!("unsupported"),
+        }
+    } else if old == LayoutType::Value {
+        match new {
+            LayoutType::Bool => format!("to_bool({e})"),
+            LayoutType::Int => format!("to_int({e})"),
+            LayoutType::Value => unreachable!(),
+            _ => panic!("unsupported"),
+        }
     } else {
-        panic!()
+        panic!("This cast *has* to fail!")
     }
+}
+
+fn comp_typed_expr(e: &Expr, ty: LayoutType, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> String {
+    let (e, t) = comp_expr(e, fname, ast, tyctxt);
+    type_cast_to(e, t, ty)
 }
 
 fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, LayoutType) {
@@ -139,13 +130,15 @@ fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, La
             (format!("fn_{f}({args_str})"), tyctxt[&l])
         },
         Expr::BinOp(op, e1, e2) => {
-            let (e1, t1) = comp_expr(e1, fname, ast, tyctxt);
-            let (e2, t2) = comp_expr(e2, fname, ast, tyctxt);
             if let BinOpKind::Equ = op {
+                let (e1, t1) = comp_expr(e1, fname, ast, tyctxt);
+                let (e2, t2) = comp_expr(e2, fname, ast, tyctxt);
                 return (comp_equ(e1, t1, e2, t2), LayoutType::Bool)
             }
-            let e1 = type_cast_to_int(e1, t1);
-            let e2 = type_cast_to_int(e2, t2);
+
+            let e1 = comp_typed_expr(e1, LayoutType::Int, fname, ast, tyctxt);
+            let e2 = comp_typed_expr(e2, LayoutType::Int, fname, ast, tyctxt);
+
             match op {
                 BinOpKind::Lt => {
                     (format!("({e1} < {e2})"), LayoutType::Bool)
@@ -195,34 +188,25 @@ fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usiz
     let spaces = "    ".repeat(level+1);
     match stmt {
         Stmt::Assign(v, e) => {
-            let (mut e, t) = comp_expr(e, fname, ast, tyctxt);
-            let l = Location::Var(fname, *v);
-            if t != tyctxt[&l] {
-                e = type_cast_to_value(e, t);
-            }
+            let ty = tyctxt[&Location::Var(fname, *v)];
+            let e = comp_typed_expr(e, ty, fname, ast, tyctxt);
             format!("{spaces}{v} = {e};\n")
         },
         Stmt::Return(e) => {
-            let (mut e, ty) = comp_expr(e, fname, ast, tyctxt);
-            let l = Location::RetVal(fname);
-            if ty != tyctxt[&l] {
-                e = type_cast_to_value(e, ty);
-            }
+            let ty = tyctxt[&Location::RetVal(fname)];
+            let e = comp_typed_expr(e, ty, fname, ast, tyctxt);
             format!("{spaces}return {e};\n")
         },
         Stmt::If(cond, then_, else_) => {
-            let (cond, tcond) = comp_expr(cond, fname, ast, tyctxt);
-            let cond = type_cast_to_bool(cond, tcond);
+            let cond = comp_typed_expr(cond, LayoutType::Bool, fname, ast, tyctxt);
             format!("{spaces}if ({}) {{\n{}{spaces}}} else {{\n{}{spaces}}}\n", cond, comp_body(then_, fname, ast, tyctxt, level+1), comp_body(else_, fname, ast, tyctxt, level+1))
         },
         Stmt::While(cond, body) => {
-            let (cond, tcond) = comp_expr(cond, fname, ast, tyctxt);
-            let cond = type_cast_to_bool(cond, tcond);
+            let cond = comp_typed_expr(cond, LayoutType::Bool, fname, ast, tyctxt);
             format!("{spaces}while ({}) {{\n{}{spaces}}}\n", cond, comp_body(body, fname, ast, tyctxt, level+1))
         },
         Stmt::Print(e) => {
-            let (s, ty) = comp_expr(e, fname, ast, tyctxt);
-            let e = type_cast_to_value(s, ty);
+            let e = comp_typed_expr(e, LayoutType::Value, fname, ast, tyctxt);
             format!("{spaces}print_value({e});\n")
         },
     }
