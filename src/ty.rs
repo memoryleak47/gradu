@@ -63,14 +63,18 @@ fn ty_infer_stmt(stmt: &Stmt, fname: &str, ast: &AST, ctxt: &mut TyLatticeCtxt) 
             let l = Location::RetVal(fname.to_string());
             add(l, r, ctxt);
         },
-        Stmt::If(_, then_, else_) => {
+        Stmt::If(c, then_, else_) => {
+            ty_infer_expr(c, fname, ast, ctxt);
             ty_infer_body(then_, fname, ast, ctxt);
             ty_infer_body(else_, fname, ast, ctxt);
         },
-        Stmt::While(_, body) => {
+        Stmt::While(c, body) => {
+            ty_infer_expr(c, fname, ast, ctxt);
             ty_infer_body(body, fname, ast, ctxt);
         },
-        Stmt::Print(_) => {},
+        Stmt::Print(e) => {
+            ty_infer_expr(e, fname, ast, ctxt);
+        },
     }
 }
 
@@ -100,7 +104,9 @@ fn ty_infer_expr(expr: &Expr, fname: &str, ast: &AST, ctxt: &mut TyLatticeCtxt) 
             let l = Location::RetVal(f.to_string());
             get(l, ctxt)
         },
-        Expr::BinOp(kind, _, _) => {
+        Expr::BinOp(kind, l, r) => {
+            let _l = ty_infer_expr(l, fname, ast, ctxt);
+            let _r = ty_infer_expr(r, fname, ast, ctxt);
             match kind {
                 BinOpKind::Equ | BinOpKind::Lt | BinOpKind::Gt =>
                     TypeLattice { might_be_bool: true, ..TypeLattice::bot() },
