@@ -18,7 +18,6 @@ pub fn comp(ast: &AST) {
 
 fn compile_ast(ast: &AST) -> String {
     let tyctxt = ty_infer(ast);
-    dbg!(&tyctxt);
 
     let mut compiled = String::from(include_str!("preamble.h"));
     for f in &ast.fns {
