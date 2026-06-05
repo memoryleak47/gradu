@@ -7,16 +7,19 @@ pub use interp::*;
 mod comp;
 pub use comp::*;
 
+mod vars;
+pub use vars::*;
+
 mod parse;
 pub use parse::*;
 
 mod ty;
 pub use ty::*;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 fn main() {
-    let s = include_str!("../examples/isprime.gradu");
+    let s = include_str!("../examples/factorial.gradu");
     let ast = parse(&s);
 
     // interp::interp(&ast);

@@ -1,5 +1,4 @@
 use crate::*;
-use std::collections::HashSet;
 use std::process::Command;
 
 pub fn comp(ast: &AST) {
@@ -34,14 +33,16 @@ fn compile_fn(f: &FnDef, tyctxt: &TyCtxt) -> String {
     let name = &f.name;
     let mut varprefix = String::new();
     for (x, ty) in tyctxt.iter() {
-        let ty = match ty {
-            LayoutType::Value => "Value",
-            LayoutType::Int => "int",
-            LayoutType::Bool => "bool",
-            LayoutType::Str => "char*",
-            LayoutType::Nil => panic!(),
-        };
-        varprefix.push_str(&format!("    {ty} {x};\n"));
+        if !f.args.contains(&x) {
+            let ty = match ty {
+                LayoutType::Value => "Value",
+                LayoutType::Int => "int",
+                LayoutType::Bool => "bool",
+                LayoutType::Str => "char*",
+                LayoutType::Nil => panic!(),
+            };
+            varprefix.push_str(&format!("    {ty} {x};\n"));
+        }
     }
 
     let body_s = comp_body(&f.body, tyctxt, 0);
@@ -55,57 +56,6 @@ fn compile_fn(f: &FnDef, tyctxt: &TyCtxt) -> String {
     }
 
     format!("Value fn_{name}({args_s}) {{\n{varprefix}\n{body_s}}}\n\n")
-}
-
-fn get_vars_expr(expr: &Expr) -> HashSet<String> {
-    let mut vars = HashSet::new();
-    match expr {
-        Expr::BinOp(_, e1, e2) => {
-            vars.extend(get_vars_expr(e1));
-            vars.extend(get_vars_expr(e2));
-        },
-        Expr::FnCall(_f, args) => {
-            for a in args {
-                vars.extend(get_vars_expr(a));
-            }
-        },
-        Expr::IntLit(_) => {},
-        Expr::StringLit(_) => {},
-        Expr::BoolLit(_) => {},
-        Expr::Var(v) => {
-            vars.insert(v.to_string());
-        },
-        Expr::Input => {},
-    }
-    vars
-}
-
-pub fn get_vars(ast: &Body) -> HashSet<String> {
-    let mut vars = HashSet::new();
-    for st in ast {
-        match st {
-            Stmt::Assign(v, e) => {
-                vars.insert(v.to_string());
-                vars.extend(get_vars_expr(e));
-            },
-            Stmt::Return(e) => {
-                vars.extend(get_vars_expr(e));
-            },
-            Stmt::If(cond, then_, else_) => {
-                vars.extend(get_vars_expr(cond));
-                vars.extend(get_vars(then_));
-                vars.extend(get_vars(else_));
-            },
-            Stmt::While(cond, body) => {
-                vars.extend(get_vars_expr(cond));
-                vars.extend(get_vars(body));
-            },
-            Stmt::Print(e) => {
-                vars.extend(get_vars_expr(e));
-            },
-        }
-    }
-    vars
 }
 
 // always produces "Value" type
@@ -152,7 +102,11 @@ fn comp_equ(e1: String, t1: LayoutType, e2: String, t2: LayoutType) -> String {
 
 fn comp_expr_raw(e: &Expr, tyctxt: &TyCtxt) -> (String, LayoutType) {
     match e {
-        Expr::FnCall(_f, _args) => todo!(),
+        Expr::FnCall(f, args) => {
+            let args = args.iter().map(|x| comp_expr(x, tyctxt)).collect::<Vec<_>>();
+            let args = args.join(", ");
+            (format!("fn_{f}({args})"), LayoutType::Value)
+        },
         Expr::BinOp(op, e1, e2) => {
             let (e1, t1) = comp_expr_raw(e1, tyctxt);
             let (e2, t2) = comp_expr_raw(e2, tyctxt);
@@ -213,7 +167,10 @@ fn comp_stmt(stmt: &Stmt, tyctxt: &TyCtxt, level: usize) -> String {
             }
             format!("{spaces}{v} = {e};\n")
         },
-        Stmt::Return(_e) => todo!(),
+        Stmt::Return(e) => {
+            let e = comp_expr(e, tyctxt);
+            format!("{spaces}return {e};\n")
+        },
         Stmt::If(cond, then_, else_) => {
             let (cond, tcond) = comp_expr_raw(cond, tyctxt);
             let cond = type_cast_to_bool(cond, tcond);

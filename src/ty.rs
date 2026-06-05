@@ -23,16 +23,17 @@ type TyLatticeCtxt = HashMap<String, TypeLattice>;
 pub fn ty_infer(ast: &AST) -> TyCtxt {
     let m = &mut HashMap::new();
 
-    let f = ast.fns.iter().find(|x| x.name == "main").unwrap();
-    let body = &f.body;
+    for f in &ast.fns {
+        let body = &f.body;
 
-    // After 5 rounds, we have to have converged!
-    for _ in 0..5 {
-        ty_infer_ast(body, m);
+        // After 5 rounds, we have to have converged!
+        for _ in 0..5 {
+            ty_infer_ast(body, m);
+        }
     }
 
     let mut out = HashMap::new();
-    for v in get_vars(body) {
+    for v in get_vars(ast) {
         let ty = get_var(&v, m);
         out.insert(v.to_string(), layout(ty));
     }
@@ -52,9 +53,7 @@ fn ty_infer_stmt(stmt: &Stmt, ctxt: &mut TyLatticeCtxt) {
             let r = ty_infer_expr(e, ctxt);
             ctxt.insert(v.to_string(), TypeLattice::merge(l, r));
         },
-        Stmt::Return(e) => {
-            todo!()
-        },
+        Stmt::Return(e) => {}, // TODO
         Stmt::If(_, then_, else_) => {
             ty_infer_ast(then_, ctxt);
             ty_infer_ast(else_, ctxt);
