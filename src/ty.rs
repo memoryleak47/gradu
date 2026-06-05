@@ -49,6 +49,9 @@ fn ty_infer_stmt(stmt: &Stmt, ctxt: &mut TyLatticeCtxt) {
             let r = ty_infer_expr(e, ctxt);
             ctxt.insert(v.to_string(), TypeLattice::merge(l, r));
         },
+        Stmt::Return(e) => {
+            todo!()
+        },
         Stmt::If(_, then_, else_) => {
             ty_infer_ast(then_, ctxt);
             ty_infer_ast(else_, ctxt);
@@ -66,11 +69,14 @@ fn get_var(v: &str, ctxt: &TyLatticeCtxt) -> TypeLattice {
 
 fn ty_infer_expr(expr: &Expr, ctxt: &TyLatticeCtxt) -> TypeLattice {
     match expr {
+        Expr::FnCall(_f, _args) => {
+            todo!()
+        },
         Expr::BinOp(kind, _, _) => {
             match kind {
                 BinOpKind::Equ | BinOpKind::Lt | BinOpKind::Gt =>
                     TypeLattice { might_be_bool: true, ..TypeLattice::bot() },
-                BinOpKind::Plus | BinOpKind::Mod =>
+                BinOpKind::Plus | BinOpKind::Mod | BinOpKind::Minus | BinOpKind::Mul =>
                     TypeLattice { might_be_int: true, ..TypeLattice::bot() },
             }
         },

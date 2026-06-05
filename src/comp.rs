@@ -2,9 +2,10 @@ use crate::*;
 use std::collections::HashSet;
 use std::process::Command;
 
-pub fn comp(ast: &Body) {
-    let tyctxt = ty_infer(ast);
-    let compiled = comp_str(ast, &tyctxt);
+pub fn comp(ast: &AST) {
+    let f = ast.fns.iter().find(|x| x.name == "main").unwrap();
+    let tyctxt = ty_infer(&f.body);
+    let compiled = comp_str(&f.body, &tyctxt);
     std::fs::write("gen.c", compiled).unwrap();
     let co = Command::new("gcc").arg("gen.c").arg("-o").arg("gen").output().unwrap().stderr;
     let co2 = String::from_utf8_lossy(&co);
@@ -43,6 +44,11 @@ fn get_vars_expr(expr: &Expr) -> HashSet<String> {
             vars.extend(get_vars_expr(e1));
             vars.extend(get_vars_expr(e2));
         },
+        Expr::FnCall(_f, args) => {
+            for a in args {
+                vars.extend(get_vars_expr(a));
+            }
+        },
         Expr::IntLit(_) => {},
         Expr::StringLit(_) => {},
         Expr::BoolLit(_) => {},
@@ -60,6 +66,9 @@ pub fn get_vars(ast: &Body) -> HashSet<String> {
         match st {
             Stmt::Assign(v, e) => {
                 vars.insert(v.to_string());
+                vars.extend(get_vars_expr(e));
+            },
+            Stmt::Return(e) => {
                 vars.extend(get_vars_expr(e));
             },
             Stmt::If(cond, then_, else_) => {
@@ -123,6 +132,7 @@ fn comp_equ(e1: String, t1: LayoutType, e2: String, t2: LayoutType) -> String {
 
 fn comp_expr_raw(e: &Expr, tyctxt: &TyCtxt) -> (String, LayoutType) {
     match e {
+        Expr::FnCall(_f, _args) => todo!(),
         Expr::BinOp(op, e1, e2) => {
             let (e1, t1) = comp_expr_raw(e1, tyctxt);
             let (e2, t2) = comp_expr_raw(e2, tyctxt);
@@ -143,6 +153,12 @@ fn comp_expr_raw(e: &Expr, tyctxt: &TyCtxt) -> (String, LayoutType) {
                 },
                 BinOpKind::Plus => {
                     (format!("({e1} + {e2})"), LayoutType::Int)
+                },
+                BinOpKind::Mul => {
+                    (format!("({e1} * {e2})"), LayoutType::Int)
+                },
+                BinOpKind::Minus => {
+                    (format!("({e1} - {e2})"), LayoutType::Int)
                 },
                 BinOpKind::Equ => unreachable!(),
             }
@@ -177,6 +193,7 @@ fn comp_stmt(stmt: &Stmt, tyctxt: &TyCtxt, level: usize) -> String {
             }
             format!("{spaces}{v} = {e};\n")
         },
+        Stmt::Return(_e) => todo!(),
         Stmt::If(cond, then_, else_) => {
             let (cond, tcond) = comp_expr_raw(cond, tyctxt);
             let cond = type_cast_to_bool(cond, tcond);
