@@ -30,6 +30,8 @@ fn eval_expr(e: &Expr, vars: &mut HashMap<String, Value>, ast: &AST) -> Value {
                 BinOpKind::Gt => Value::Bool(e1 > e2),
                 BinOpKind::Mod => Value::Int(e1 % e2),
                 BinOpKind::Plus => Value::Int(e1 + e2),
+                BinOpKind::Mul => Value::Int(e1 * e2),
+                BinOpKind::Minus => Value::Int(e1 - e2),
                 BinOpKind::Equ => unreachable!(),
             }
         },

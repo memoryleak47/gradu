@@ -16,7 +16,7 @@ pub use parse::*;
 use std::collections::HashMap;
 
 fn main() {
-    let s = include_str!("../examples/isprime.gradu");
+    let s = include_str!("../examples/factorial.gradu");
     let ast = parse(&s);
 
     interp::interp(&ast);

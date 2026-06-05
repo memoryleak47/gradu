@@ -57,6 +57,8 @@ pub BinOp: BinOpKind = {
     "%" => BinOpKind::Mod,
     "+" => BinOpKind::Plus,
     "==" => BinOpKind::Equ,
+    "*" => BinOpKind::Mul,
+    "-" => BinOpKind::Minus,
 }
 
 pub Stmt: Stmt = {

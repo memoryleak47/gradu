@@ -36,5 +36,7 @@ pub enum BinOpKind {
     Gt,
     Mod,
     Plus,
+    Mul,
+    Minus,
     Equ,
 }
