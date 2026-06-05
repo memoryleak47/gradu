@@ -116,11 +116,9 @@ fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, La
             let ff = ast.fns.iter().find(|x| &x.name == f).unwrap();
             let mut args_str = String::new();
             for (i, (x, e)) in ff.args.iter().zip(args).enumerate() {
-                let (e, y_ty) = comp_expr(e, fname, ast, tyctxt);
-                let l = Location::Var(*f, *x);
-                let real_ty = tyctxt[&l];
-                let out = type_cast_to(e, y_ty, real_ty);
-                args_str.push_str(&out);
+                let ty = tyctxt[&Location::Var(*f, *x)];
+                let e = comp_typed_expr(e, ty, fname, ast, tyctxt);
+                args_str.push_str(&e);
                 if i != ff.args.len() - 1 {
                     args_str.push_str(", ");
                 }
