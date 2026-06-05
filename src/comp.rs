@@ -3,9 +3,8 @@ use std::collections::HashSet;
 use std::process::Command;
 
 pub fn comp(ast: &AST) {
-    let f = ast.fns.iter().find(|x| x.name == "main").unwrap();
-    let tyctxt = ty_infer(&f.body);
-    let compiled = comp_str(&f.body, &tyctxt);
+    let compiled = compile_ast(ast);
+
     std::fs::write("gen.c", compiled).unwrap();
     let co = Command::new("gcc").arg("gen.c").arg("-o").arg("gen").output().unwrap().stderr;
     let co2 = String::from_utf8_lossy(&co);
@@ -18,9 +17,21 @@ pub fn comp(ast: &AST) {
     println!("{out2}");
 }
 
-fn comp_str(ast: &Body, tyctxt: &TyCtxt) -> String {
-    let preamble = include_str!("preamble.h");
+fn compile_ast(ast: &AST) -> String {
+    let tyctxt = ty_infer(ast);
 
+    let mut compiled = String::from(include_str!("preamble.h"));
+    for f in &ast.fns {
+        compiled.push_str(&compile_fn(f, &tyctxt));
+    }
+
+    compiled.push_str("int main() { fn_main(); return 0; }");
+
+    compiled
+}
+
+fn compile_fn(f: &FnDef, tyctxt: &TyCtxt) -> String {
+    let name = &f.name;
     let mut varprefix = String::new();
     for (x, ty) in tyctxt.iter() {
         let ty = match ty {
@@ -32,9 +43,18 @@ fn comp_str(ast: &Body, tyctxt: &TyCtxt) -> String {
         };
         varprefix.push_str(&format!("    {ty} {x};\n"));
     }
-    
-    let s = comp_ast(ast, tyctxt, 0);
-    format!("{preamble}int main() {{\n{varprefix}{s}    return 0;\n}}")
+
+    let body_s = comp_body(&f.body, tyctxt, 0);
+    let mut args_s = String::new();
+
+    for (i, arg) in f.args.iter().enumerate() {
+        args_s.push_str(&format!("Value {arg}"));
+        if i != f.args.len() - 1 {
+            args_s.push_str(", ");
+        }
+    }
+
+    format!("Value fn_{name}({args_s}) {{\n{varprefix}\n{body_s}}}\n\n")
 }
 
 fn get_vars_expr(expr: &Expr) -> HashSet<String> {
@@ -197,12 +217,12 @@ fn comp_stmt(stmt: &Stmt, tyctxt: &TyCtxt, level: usize) -> String {
         Stmt::If(cond, then_, else_) => {
             let (cond, tcond) = comp_expr_raw(cond, tyctxt);
             let cond = type_cast_to_bool(cond, tcond);
-            format!("{spaces}if ({}) {{\n{}{spaces}}} else {{\n{}{spaces}}}\n", cond, comp_ast(then_, tyctxt, level+1), comp_ast(else_, tyctxt, level+1))
+            format!("{spaces}if ({}) {{\n{}{spaces}}} else {{\n{}{spaces}}}\n", cond, comp_body(then_, tyctxt, level+1), comp_body(else_, tyctxt, level+1))
         },
         Stmt::While(cond, body) => {
             let (cond, tcond) = comp_expr_raw(cond, tyctxt);
             let cond = type_cast_to_bool(cond, tcond);
-            format!("{spaces}while ({}) {{\n{}{spaces}}}\n", cond, comp_ast(body, tyctxt, level+1))
+            format!("{spaces}while ({}) {{\n{}{spaces}}}\n", cond, comp_body(body, tyctxt, level+1))
         },
         Stmt::Print(e) => {
             let e = comp_expr(e, tyctxt);
@@ -212,9 +232,9 @@ fn comp_stmt(stmt: &Stmt, tyctxt: &TyCtxt, level: usize) -> String {
 }
 
 
-fn comp_ast(ast: &Body, tyctxt: &TyCtxt, level: usize) -> String {
+fn comp_body(body: &Body, tyctxt: &TyCtxt, level: usize) -> String {
     let mut out = String::new();
-    for stmt in ast {
+    for stmt in body {
         out.push_str(&comp_stmt(stmt, tyctxt, level));
     }
     out
