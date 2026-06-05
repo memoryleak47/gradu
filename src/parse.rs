@@ -5,8 +5,8 @@ lalrpop_mod!(pub grammar);
 
 use lalrpop_util::ParseError;
 
-pub fn parse(s: &str) -> Body {
-    match grammar::BodyParser::new().parse(s) {
+pub fn parse(s: &str) -> AST {
+    match grammar::ASTParser::new().parse(s) {
         Ok(ast) => ast,
         Err(err) => print_parse_error(s, err),
     }

@@ -19,6 +19,6 @@ fn main() {
     let s = include_str!("../examples/factorial.gradu");
     let ast = parse(&s);
 
-    interp::interp(&ast);
-    comp::comp(&ast);
+    // interp::interp(&ast.body);
+    comp::comp(&ast.body);
 }
