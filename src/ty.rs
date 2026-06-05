@@ -20,7 +20,7 @@ pub enum LayoutType {
 pub type TyCtxt = HashMap<Location, LayoutType>;
 type TyLatticeCtxt = HashMap<Location, TypeLattice>;
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum Location {
     Var(/*fn*/ Symbol, /*var*/ Symbol), // also includes fn args
     RetVal(/*fn*/ Symbol),
@@ -29,14 +29,14 @@ pub enum Location {
 pub fn ty_infer(ast: &AST) -> TyCtxt {
     let mut m = HashMap::new();
 
-    // TODO this is a hack to initialize `m` at every location.
+    // initilize `m`.
     for f in &ast.fns {
         let l = Location::RetVal(f.name);
-        let _ = get(l, &mut m);
+        m.insert(l, TypeLattice::bot());
 
         for arg in &f.args {
             let l = Location::Var(f.name, *arg);
-            let _ = get(l, &mut m);
+            m.insert(l, TypeLattice::bot());
         }
     }
 
@@ -89,14 +89,8 @@ fn ty_infer_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
     }
 }
 
-fn get(v: Location, ctxt: &mut TyLatticeCtxt) -> TypeLattice {
-    ctxt.entry(v)
-        .or_insert(TypeLattice::bot())
-        .clone()
-}
-
 fn add(v: Location, ty: TypeLattice, ctxt: &mut TyLatticeCtxt) {
-    let ty2 = get(v.clone(), ctxt);
+    let ty2 = ctxt[&v];
     let ty = TypeLattice::merge(ty, ty2);
     ctxt.insert(v, ty);
 }
@@ -113,7 +107,7 @@ fn ty_infer_expr(expr: &Expr, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
             }
 
             let l = Location::RetVal(*f);
-            get(l, ctxt)
+            ctxt[&l]
         },
         Expr::BinOp(kind, l, r) => {
             let _l = ty_infer_expr(l, fname, ast, ctxt);
@@ -130,7 +124,7 @@ fn ty_infer_expr(expr: &Expr, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
         Expr::BoolLit(_) => TypeLattice { might_be_bool: true, ..TypeLattice::bot() },
         Expr::Var(v) => {
             let l = Location::Var(fname, *v);
-            get(l, ctxt)
+            ctxt[&l]
         }
         Expr::Input => TypeLattice::top(),
     }
