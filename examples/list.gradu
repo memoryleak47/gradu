@@ -4,5 +4,7 @@ l = [];
 l.push(63);
 l[0] = (l[0]) - 21;
 
+l.push(l);
+
 # OUT: 42
-print(l[0]);
+print((l[1])[0]);

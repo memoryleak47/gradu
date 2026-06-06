@@ -105,8 +105,8 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
         match new {
             LayoutType::Bool => format!("value_to_bool({e})"),
             LayoutType::Int => format!("value_to_int({e})"),
-            LayoutType::Str => todo!(),
-            LayoutType::List => todo!(),
+            LayoutType::Str => format!("value_to_str({e})"),
+            LayoutType::List => format!("value_to_list({e})"),
             LayoutType::Nil => todo!(),
             LayoutType::Value => unreachable!(),
         }

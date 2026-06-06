@@ -127,6 +127,11 @@ bool value_to_bool(Value v) {
     return v.payload.b;
 }
 
+list* value_to_list(Value v) {
+    assert(v.tag == TAG_LIST);
+    return v.payload.l;
+}
+
 bool is_equal(Value v1, Value v2) {
     if (v1.tag != v2.tag) { return false; }
     switch (v1.tag) {
