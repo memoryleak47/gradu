@@ -67,10 +67,13 @@ fn ty_infer_body(body: &Body, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
 fn ty_infer_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt) {
     match stmt {
         Stmt::ListStore(l, i, v) => {
-            todo!()
+            ty_infer_expr(l, fname, ast, ctxt);
+            ty_infer_expr(i, fname, ast, ctxt);
+            ty_infer_expr(v, fname, ast, ctxt);
         },
         Stmt::Push(l, v) => {
-            todo!()
+            ty_infer_expr(l, fname, ast, ctxt);
+            ty_infer_expr(v, fname, ast, ctxt);
         },
         Stmt::Assign(v, e) => {
             let r = ty_infer_expr(e, fname, ast, ctxt);
@@ -106,10 +109,10 @@ fn add(v: Location, ty: TypeLattice, ctxt: &mut TyLatticeCtxt) {
 fn ty_infer_expr(expr: &Expr, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt) -> TypeLattice {
     match expr {
         Expr::NewList => {
-            todo!()
+            TypeLattice { might_be_list: true, ..TypeLattice::bot() }
         },
         Expr::IndexList(l, i) => {
-            todo!()
+            TypeLattice::top() // TODO make more precise
         },
         Expr::FnCall(f, args) => {
             let fndef = &ast.fns.iter().find(|x| &x.name == f).unwrap();
