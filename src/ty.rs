@@ -34,8 +34,8 @@ pub fn ty_infer(ast: &AST) -> TyCtxt {
         let l = Location::RetVal(f.name);
         m.insert(l, TypeLattice::bot());
 
-        for arg in &f.args {
-            let l = Location::Var(f.name, *arg);
+        for v in get_vars(f) {
+            let l = Location::Var(f.name, v);
             m.insert(l, TypeLattice::bot());
         }
     }

@@ -10,10 +10,13 @@ pub use parse::*;
 mod ty;
 pub use ty::*;
 
+mod vars;
+pub use vars::*;
+
 extern crate symbol_table;
 pub type Symbol = symbol_table::GlobalSymbol;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 fn main() {
     use std::path::*;
