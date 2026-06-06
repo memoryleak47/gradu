@@ -22,6 +22,7 @@ typedef struct list list;
 struct list {
     Value* elements;
     int length;
+    int capacity;
 };
 
 struct Value {
@@ -37,14 +38,23 @@ struct Value {
 list* new_list() {
     list* l = malloc(sizeof(list));
     l->length = 0;
+    l->capacity = 0;
     l->elements = nullptr;
     return l;
 }
 
+int max(int x, int y) {
+    if (x > y) { return x; }
+    return y;
+}
+
 void push_list(list* l, Value v) {
+    if (l->length == l->capacity) {
+        l->capacity = max(2*l->capacity, 1);
+        l->elements = realloc(l->elements, sizeof(Value) * l->capacity);
+    }
+    l->elements[l->length] = v;
     l->length++;
-    l->elements = realloc(l->elements, sizeof(Value) * l->length);
-    l->elements[l->length-1] = v;
 }
 
 void store_list(list* l, int i, Value v) {

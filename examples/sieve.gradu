@@ -1,6 +1,6 @@
 # sieve.gradu
 
-fn isprime(x) {
+fn count_primes(x) {
     sieve = [];
     while ((sieve.length) < (x+1)) {
         sieve.push(true);
@@ -19,9 +19,18 @@ fn isprime(x) {
         }
         i = i+1;
     }
-    return sieve[x];
+
+    primes = 0;
+
+    i = 0;
+    while (i < (sieve.length)) {
+        if (sieve[i]) {
+            primes = primes+1;
+        } else {}
+        i = i+1;
+    }
+    return primes;
 }
 
-# OUT: true
-print(isprime(478));
-
+# OUT: 664579
+print(count_primes(10000000));
