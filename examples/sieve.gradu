@@ -1,0 +1,27 @@
+# sieve.gradu
+
+fn isprime(x) {
+    sieve = [];
+    while ((sieve.length) < (x+1)) {
+        sieve.push(true);
+    }
+    sieve[0] = false;
+    sieve[1] = false;
+    i = 2;
+    while (i < (sieve.length)) {
+        if (sieve[i]) {
+            k = 2;
+            while ((i*k) < (sieve.length)) {
+                sieve[(i*k)] = false;
+                k = k+1;
+            }
+        } else {
+        }
+        i = i+1;
+    }
+    return sieve[x];
+}
+
+# OUT: true
+print(isprime(478));
+

@@ -57,6 +57,11 @@ Value index_list(list* l, int i) {
     return l->elements[i];
 }
 
+
+int length(list* l) {
+    return l->length;
+}
+
 void print_value(Value v) {
     if (v.tag == TAG_INT) {
         printf("%i\n", v.payload.i);
@@ -122,4 +127,3 @@ bool is_equal(Value v1, Value v2) {
         default: assert(false);
     }
 }
-

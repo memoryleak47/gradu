@@ -57,6 +57,7 @@ pub SafeExpr: Expr = {
     "true" => Expr::BoolLit(true),
     "false" => Expr::BoolLit(false),
     <f:Ident> "(" <args:Comma<Expr>> ")" => Expr::FnCall(f, args),
+    "(" <l:SafeExpr> "." "length" ")" => Expr::Length(Box::new(l)),
 };
 
 pub BinOp: BinOpKind = {

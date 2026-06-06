@@ -52,6 +52,9 @@ fn get_vars_expr(expr: &Expr, set: &mut HashSet<Symbol>) {
     use Expr::*;
     match expr {
         NewList => {},
+        Length(l) => {
+            get_vars_expr(l, set);
+        },
         IndexList(l, i) => {
             get_vars_expr(l, set);
             get_vars_expr(i, set);

@@ -125,6 +125,10 @@ fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, La
         Expr::NewList => {
             (format!("new_list()"), LayoutType::List)
         },
+        Expr::Length(l) => {
+            let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
+            (format!("length({l})"), LayoutType::Int)
+        },
         Expr::IndexList(l, i) => {
             let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
             let i = comp_typed_expr(i, LayoutType::Int, fname, ast, tyctxt);

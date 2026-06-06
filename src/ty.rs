@@ -108,6 +108,10 @@ fn add(v: Location, ty: TypeLattice, ctxt: &mut TyLatticeCtxt) {
 
 fn ty_infer_expr(expr: &Expr, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt) -> TypeLattice {
     match expr {
+        Expr::Length(l) => {
+            let _l = ty_infer_expr(l, fname, ast, ctxt);
+            TypeLattice { might_be_int: true, ..TypeLattice::bot() }
+        },
         Expr::NewList => {
             TypeLattice { might_be_list: true, ..TypeLattice::bot() }
         },

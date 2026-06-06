@@ -28,6 +28,7 @@ pub enum Expr {
     NewList,
     IndexList(/*list*/Box<Expr>, /*index*/Box<Expr>),
     BinOp(BinOpKind, Box<Expr>, Box<Expr>),
+    Length(Box<Expr>),
     IntLit(i64),
     StringLit(String),
     BoolLit(bool),
