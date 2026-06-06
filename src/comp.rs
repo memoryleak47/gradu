@@ -4,14 +4,19 @@ use std::process::Command;
 pub fn comp(ast: &AST) {
     let compiled = compile_ast(ast);
 
-    std::fs::write("gen.c", compiled).unwrap();
-    let co = Command::new("gcc").arg("gen.c").arg("-o").arg("gen").output().unwrap().stderr;
+
+    let root = env!("CARGO_MANIFEST_DIR");
+    let exe = &format!("{root}/exe");
+    let exe_c = &format!("{root}/exe.c");
+
+    std::fs::write(exe_c, compiled).unwrap();
+    let co = Command::new("gcc").args([exe_c, "-o", exe]).output().unwrap().stderr;
     let co2 = String::from_utf8_lossy(&co);
     if !co2.is_empty() {
         println!("compiler error: {co2:?}");
     }
 
-    let out = Command::new("./gen").output().unwrap().stdout;
+    let out = Command::new(exe).output().unwrap().stdout;
     let out2 = String::from_utf8_lossy(&out);
     println!("{out2}");
 }
