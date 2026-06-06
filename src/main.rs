@@ -1,9 +1,6 @@
 mod ast;
 pub use ast::*;
 
-mod interp;
-pub use interp::*;
-
 mod comp;
 pub use comp::*;
 
@@ -22,6 +19,5 @@ fn main() {
     let s = include_str!("../examples/factorial.gradu");
     let ast = parse(&s);
 
-    // interp::interp(&ast);
     comp::comp(&ast);
 }
