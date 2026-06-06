@@ -70,7 +70,7 @@ fn compile_fn(f: &FnDef, ast: &AST, tyctxt: &TyCtxt) -> String {
     // body
     let body_s = comp_body(&f.body, name, ast, tyctxt, 0);
 
-    format!("{retval} fn_{name}({args_s}) {{\n{varprefix}\n{body_s}}}\n\n")
+    format!("{retval} fn_{name}({args_s}) {{\n{varprefix}{body_s}}}\n\n")
 }
 
 fn comp_equ(e1: String, t1: LayoutType, e2: String, t2: LayoutType) -> String {
