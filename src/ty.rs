@@ -6,7 +6,7 @@ pub struct TypeLattice {
     might_be_nil: bool,
     might_be_str: bool,
     might_be_int: bool,
-    list_locs: HashSet<ListLoc>,
+    might_be_list: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -15,7 +15,7 @@ pub enum LayoutType {
     Nil,
     Str,
     Int,
-    List(Box<LayoutType>),
+    List,
     Value, // "any"
 }
 
@@ -26,7 +26,7 @@ type TyLatticeCtxt = HashMap<Location, TypeLattice>;
 pub enum Location {
     Var(/*fn*/ Symbol, /*var*/ Symbol), // also includes fn args
     RetVal(/*fn*/ Symbol),
-    ListItem(ListLoc),
+    ListItem,
 }
 
 // points to a `Expr::NewList`.
@@ -46,6 +46,8 @@ pub fn ty_infer(ast: &AST) -> TyCtxt {
         }
     }
 
+    m.insert(Location::ListItem, TypeLattice::bot());
+
     // After 5 rounds, we have to have converged!
     for _ in 0..5 {
         for f in &ast.fns {
@@ -53,8 +55,8 @@ pub fn ty_infer(ast: &AST) -> TyCtxt {
         }
     }
 
-    m.iter()
-     .map(|(v, ty)| (*v, layout(ty, &m)))
+    m.into_iter()
+     .map(|(v, ty)| (v, layout(ty)))
      .collect()
 }
 
@@ -75,21 +77,15 @@ fn ty_infer_body(body: &Body, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
 fn ty_infer_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt) {
     match stmt {
         Stmt::ListStore(l, i, v) => {
-            let l = ty_infer_expr(l, fname, ast, ctxt);
+            let _l = ty_infer_expr(l, fname, ast, ctxt);
             let _i = ty_infer_expr(i, fname, ast, ctxt);
             let v = ty_infer_expr(v, fname, ast, ctxt);
-            for ll in &l.list_locs {
-                let loc = Location::ListItem(*ll);
-                add(loc, &v, ctxt);
-            }
+            add(Location::ListItem, &v, ctxt);
         },
         Stmt::Push(l, v) => {
-            let l = ty_infer_expr(l, fname, ast, ctxt);
+            let _l = ty_infer_expr(l, fname, ast, ctxt);
             let v = ty_infer_expr(v, fname, ast, ctxt);
-            for ll in &l.list_locs {
-                let loc = Location::ListItem(*ll);
-                add(loc, &v, ctxt);
-            }
+            add(Location::ListItem, &v, ctxt);
         },
         Stmt::Assign(v, e) => {
             let r = ty_infer_expr(e, fname, ast, ctxt);
@@ -129,14 +125,13 @@ fn ty_infer_expr(expr: &Expr, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
             TypeLattice { might_be_int: true, ..TypeLattice::bot() }
         },
         Expr::NewList => {
-            let list_locs = [expr as *const Expr].into_iter().collect();
-            TypeLattice { list_locs, ..TypeLattice::bot() }
+            TypeLattice { might_be_list: true, ..TypeLattice::bot() }
         },
         Expr::IndexList(l, i) => {
-            let l = ty_infer_expr(l, fname, ast, ctxt);
+            let _l = ty_infer_expr(l, fname, ast, ctxt);
             let _i = ty_infer_expr(i, fname, ast, ctxt);
 
-            item_type(&l.list_locs, ctxt)
+            get(Location::ListItem, ctxt)
         },
         Expr::FnCall(f, args) => {
             let fndef = &ast.fns.iter().find(|x| &x.name == f).unwrap();
@@ -172,7 +167,7 @@ fn ty_infer_expr(expr: &Expr, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
             might_be_nil: true,
             might_be_str: true,
             might_be_int: true,
-            list_locs: HashSet::new(),
+            might_be_list: false,
         },
     }
 }
@@ -184,7 +179,7 @@ impl TypeLattice {
             might_be_nil: false,
             might_be_str: false,
             might_be_int: false,
-            list_locs: HashSet::new(),
+            might_be_list: false,
         }
     }
 
@@ -194,32 +189,18 @@ impl TypeLattice {
             might_be_nil: x.might_be_nil|| y.might_be_nil,
             might_be_str: x.might_be_str || y.might_be_str,
             might_be_int: x.might_be_int || y.might_be_int,
-            list_locs: x.list_locs.union(&y.list_locs).copied().collect(),
+            might_be_list: x.might_be_list || y.might_be_list,
         }
     }
 }
 
-fn item_type(list_locs: &HashSet<ListLoc>, m: &HashMap<Location, TypeLattice>) -> TypeLattice {
-    let mut out = TypeLattice::bot();
-    for a in list_locs {
-        let loc = Location::ListItem(*a);
-        let ty2 = get(loc, m);
-        out = TypeLattice::merge(&out, &ty2);
-    }
-    out
-}
-
-fn layout(x: &TypeLattice, m: &HashMap<Location, TypeLattice>) -> LayoutType {
-    if (x.might_be_int) as u8 + (x.might_be_bool as u8) + (x.might_be_nil as u8) + (x.might_be_str as u8) + ((x.list_locs.len() > 0) as u8) != 1 {
+fn layout(x: TypeLattice) -> LayoutType {
+    if (x.might_be_int) as u8 + (x.might_be_bool as u8) + (x.might_be_nil as u8) + (x.might_be_str as u8) + (x.might_be_list as u8) != 1 {
         LayoutType::Value
     } else if x.might_be_bool { LayoutType::Bool }
     else if x.might_be_int { LayoutType::Int }
     else if x.might_be_str { LayoutType::Str }
     else if x.might_be_nil { LayoutType::Nil }
-    else if x.list_locs.len() > 0 {
-        let out = item_type(&x.list_locs, m);
-        let out = layout(&out, m);
-        LayoutType::List(Box::new(out))
-    }
+    else if x.might_be_list { LayoutType::List }
     else { LayoutType::Value }
 }

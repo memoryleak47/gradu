@@ -19,12 +19,6 @@
 typedef struct Value Value;
 typedef struct list list;
 
-struct list {
-    Value* elements;
-    int length;
-    int capacity;
-};
-
 struct Value {
     char tag;
     union {
@@ -34,43 +28,6 @@ struct Value {
         list* l;
     } payload;
 };
-
-list* new_list() {
-    list* l = malloc(sizeof(list));
-    l->length = 0;
-    l->capacity = 0;
-    l->elements = nullptr;
-    return l;
-}
-
-int max(int x, int y) {
-    if (x > y) { return x; }
-    return y;
-}
-
-void push_list(list* l, Value v) {
-    if (l->length == l->capacity) {
-        l->capacity = max(2*l->capacity, 1);
-        l->elements = realloc(l->elements, sizeof(Value) * l->capacity);
-    }
-    l->elements[l->length] = v;
-    l->length++;
-}
-
-void store_list(list* l, int i, Value v) {
-    assert(l->length > i);
-    l->elements[i] = v;
-}
-
-Value index_list(list* l, int i) {
-    assert(l->length > i);
-    return l->elements[i];
-}
-
-
-int length(list* l) {
-    return l->length;
-}
 
 void print_value(Value v) {
     if (v.tag == TAG_INT) {

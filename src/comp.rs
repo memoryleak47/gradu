@@ -24,6 +24,12 @@ fn compile_ast(ast: &AST) -> String {
     let tyctxt = ty_infer(ast);
 
     let mut compiled = String::from(include_str!("preamble.h"));
+
+    let item_ty = get_ty(Location::ListItem, &tyctxt);
+    let item_ty = stringify_layout(&item_ty);
+    let list_h = include_str!("list.h").replace("T", &item_ty);
+    compiled.push_str(&list_h);
+
     for f in &ast.fns {
         compiled.push_str(&compile_fn(f, ast, &tyctxt));
     }
@@ -39,7 +45,7 @@ fn stringify_layout(ty: &LayoutType) -> String {
         LayoutType::Int => "int",
         LayoutType::Bool => "bool",
         LayoutType::Str => "char*",
-        LayoutType::List(_) => "list*",
+        LayoutType::List => "list*",
         LayoutType::Nil => panic!(),
     })
 }
@@ -96,7 +102,7 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
             LayoutType::Bool => format!("bool_to_value({e})"),
             LayoutType::Int => format!("int_to_value({e})"),
             LayoutType::Str => format!("str_to_value({e})"),
-            LayoutType::List(_) => format!("list_to_value({e})"),
+            LayoutType::List => format!("list_to_value({e})"),
             LayoutType::Nil => format!("nil_to_value({e})"),
             LayoutType::Value => unreachable!(),
         }
@@ -105,7 +111,7 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
             LayoutType::Bool => format!("value_to_bool({e})"),
             LayoutType::Int => format!("value_to_int({e})"),
             LayoutType::Str => format!("value_to_str({e})"),
-            LayoutType::List(_) => format!("value_to_list({e})"),
+            LayoutType::List => format!("value_to_list({e})"),
             LayoutType::Nil => todo!(),
             LayoutType::Value => unreachable!(),
         }
@@ -124,17 +130,19 @@ fn comp_typed_expr(e: &Expr, ty: LayoutType, fname: Symbol, ast: &AST, tyctxt: &
 fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, LayoutType) {
     match e {
         Expr::NewList => {
-            let ty = get_ty(Location::ListItem(e as *const Expr), tyctxt);
-            (format!("new_list()"), LayoutType::List(Box::new(ty)))
+            (format!("new_list()"), LayoutType::List)
         },
         Expr::Length(l) => {
-            let l = comp_typed_expr(l, LayoutType::List(todo!()), fname, ast, tyctxt);
+            let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
             (format!("length({l})"), LayoutType::Int)
         },
         Expr::IndexList(l, i) => {
-            let l = comp_typed_expr(l, LayoutType::List(todo!()), fname, ast, tyctxt);
+            let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
             let i = comp_typed_expr(i, LayoutType::Int, fname, ast, tyctxt);
-            (format!("index_list({l}, {i})"), LayoutType::Value)
+
+            let ty = get_ty(Location::ListItem, tyctxt);
+
+            (format!("index_list({l}, {i})"), ty)
         },
         Expr::FnCall(f, args) => {
             let ff = ast.fns.iter().find(|x| &x.name == f).unwrap();
@@ -212,14 +220,16 @@ fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usiz
     let spaces = "    ".repeat(level+1);
     match stmt {
         Stmt::ListStore(l, i, v) => {
-            let l = comp_typed_expr(l, LayoutType::List(todo!()), fname, ast, tyctxt);
+            let ty = get_ty(Location::ListItem, tyctxt);
+            let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
             let i = comp_typed_expr(i, LayoutType::Int, fname, ast, tyctxt);
-            let v = comp_typed_expr(v, LayoutType::Value, fname, ast, tyctxt);
+            let v = comp_typed_expr(v, ty, fname, ast, tyctxt);
             format!("{spaces}store_list({l}, {i}, {v});\n")
         },
         Stmt::Push(l, v) => {
-            let l = comp_typed_expr(l, LayoutType::List(todo!()), fname, ast, tyctxt);
-            let v = comp_typed_expr(v, LayoutType::Value, fname, ast, tyctxt);
+            let ty = get_ty(Location::ListItem, tyctxt);
+            let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
+            let v = comp_typed_expr(v, ty, fname, ast, tyctxt);
             format!("{spaces}push_list({l}, {v});\n")
         },
         Stmt::Assign(v, e) => {
