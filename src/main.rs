@@ -1,8 +1,8 @@
 mod ast;
 pub use ast::*;
 
-// mod comp;
-// pub use comp::*;
+mod comp;
+pub use comp::*;
 
 mod parse;
 pub use parse::*;
@@ -28,8 +28,5 @@ fn main() {
     let s = std::fs::read_to_string(path).unwrap();
 
     let ast = parse(&s);
-    let tyctxt = ty_infer(&ast);
-    dbg!(tyctxt);
-
-    // comp::comp(&ast);
+    comp::comp(&ast);
 }

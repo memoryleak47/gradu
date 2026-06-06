@@ -4,7 +4,6 @@ use std::process::Command;
 pub fn comp(ast: &AST) {
     let compiled = compile_ast(ast);
 
-
     let root = env!("CARGO_MANIFEST_DIR");
     let exe = &format!("{root}/exe");
     let exe_c = &format!("{root}/exe.c");
@@ -34,7 +33,7 @@ fn compile_ast(ast: &AST) -> String {
     compiled
 }
 
-fn stringify_layout(ty: LayoutType) -> String {
+fn stringify_layout(ty: &LayoutType) -> String {
     String::from(match ty {
         LayoutType::Value => "Value",
         LayoutType::Int => "int",
@@ -50,14 +49,14 @@ fn compile_fn(f: &FnDef, ast: &AST, tyctxt: &TyCtxt) -> String {
 
     // retval
     let retval = tyctxt.get(&Location::RetVal(f.name)).unwrap().clone();
-    let retval = stringify_layout(retval);
+    let retval = stringify_layout(&retval);
 
     // args
     let mut args_s = String::new();
     for (i, arg) in f.args.iter().enumerate() {
         let l = Location::Var(f.name, *arg);
-        let argty = tyctxt[&l];
-        let argty = stringify_layout(argty);
+        let argty = get_ty(l, tyctxt);
+        let argty = stringify_layout(&argty);
         args_s.push_str(&format!("{argty} {arg}"));
         if i != f.args.len() - 1 {
             args_s.push_str(", ");
@@ -68,7 +67,7 @@ fn compile_fn(f: &FnDef, ast: &AST, tyctxt: &TyCtxt) -> String {
     let mut varprefix = String::new();
     for (loc, varty) in tyctxt.iter() {
         if let Location::Var(ff, x) = loc && *ff == name && !f.args.contains(x) {
-            let varty = stringify_layout(*varty);
+            let varty = stringify_layout(varty);
             varprefix.push_str(&format!("    {varty} {x};\n"));
         }
     }
@@ -111,6 +110,8 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
             LayoutType::Value => unreachable!(),
         }
     } else {
+        dbg!(&old);
+        dbg!(&new);
         panic!("This cast *has* to fail!")
     }
 }
@@ -123,15 +124,15 @@ fn comp_typed_expr(e: &Expr, ty: LayoutType, fname: Symbol, ast: &AST, tyctxt: &
 fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, LayoutType) {
     match e {
         Expr::NewList => {
-            let ty = tyctxt[&Location::ListItem(e as *const Expr)];
+            let ty = get_ty(Location::ListItem(e as *const Expr), tyctxt);
             (format!("new_list()"), ty)
         },
         Expr::Length(l) => {
-            let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
+            let l = comp_typed_expr(l, LayoutType::List(todo!()), fname, ast, tyctxt);
             (format!("length({l})"), LayoutType::Int)
         },
         Expr::IndexList(l, i) => {
-            let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
+            let l = comp_typed_expr(l, LayoutType::List(todo!()), fname, ast, tyctxt);
             let i = comp_typed_expr(i, LayoutType::Int, fname, ast, tyctxt);
             (format!("index_list({l}, {i})"), LayoutType::Value)
         },
@@ -139,7 +140,7 @@ fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, La
             let ff = ast.fns.iter().find(|x| &x.name == f).unwrap();
             let mut args_str = String::new();
             for (i, (x, e)) in ff.args.iter().zip(args).enumerate() {
-                let ty = tyctxt[&Location::Var(*f, *x)];
+                let ty = get_ty(Location::Var(*f, *x), tyctxt);
                 let e = comp_typed_expr(e, ty, fname, ast, tyctxt);
                 args_str.push_str(&e);
                 if i != ff.args.len() - 1 {
@@ -148,7 +149,8 @@ fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, La
             }
 
             let l = Location::RetVal(*f);
-            (format!("fn_{f}({args_str})"), tyctxt[&l])
+            let ty = get_ty(l, tyctxt);
+            (format!("fn_{f}({args_str})"), ty)
         },
         Expr::BinOp(op, e1, e2) => {
             if let BinOpKind::Equ = op {
@@ -197,7 +199,8 @@ fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, La
         },
         Expr::Var(v) => {
             let l = Location::Var(fname, *v);
-            (format!("{v}"), tyctxt[&l])
+            let ty = get_ty(l, tyctxt);
+            (format!("{v}"), ty)
         },
         Expr::Input => {
             (format!("input()"), LayoutType::Value)
@@ -209,23 +212,25 @@ fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usiz
     let spaces = "    ".repeat(level+1);
     match stmt {
         Stmt::ListStore(l, i, v) => {
-            let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
+            let l = comp_typed_expr(l, LayoutType::List(todo!()), fname, ast, tyctxt);
             let i = comp_typed_expr(i, LayoutType::Int, fname, ast, tyctxt);
             let v = comp_typed_expr(v, LayoutType::Value, fname, ast, tyctxt);
             format!("{spaces}store_list({l}, {i}, {v});\n")
         },
         Stmt::Push(l, v) => {
-            let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
+            let l = comp_typed_expr(l, LayoutType::List(todo!()), fname, ast, tyctxt);
             let v = comp_typed_expr(v, LayoutType::Value, fname, ast, tyctxt);
             format!("{spaces}push_list({l}, {v});\n")
         },
         Stmt::Assign(v, e) => {
-            let ty = tyctxt[&Location::Var(fname, *v)];
+            let loc = Location::Var(fname, *v);
+            let ty = get_ty(loc, tyctxt);
             let e = comp_typed_expr(e, ty, fname, ast, tyctxt);
             format!("{spaces}{v} = {e};\n")
         },
         Stmt::Return(e) => {
-            let ty = tyctxt[&Location::RetVal(fname)];
+            let loc = Location::RetVal(fname);
+            let ty = get_ty(loc, tyctxt);
             let e = comp_typed_expr(e, ty, fname, ast, tyctxt);
             format!("{spaces}return {e};\n")
         },
@@ -244,6 +249,9 @@ fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usiz
     }
 }
 
+fn get_ty(loc: Location, tyctxt: &TyCtxt) -> LayoutType {
+    tyctxt.get(&loc).cloned().unwrap_or(LayoutType::Value)
+}
 
 fn comp_body(body: &Body, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usize) -> String {
     let mut out = String::new();
