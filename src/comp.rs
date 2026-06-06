@@ -40,7 +40,7 @@ fn stringify_layout(ty: LayoutType) -> String {
         LayoutType::Int => "int",
         LayoutType::Bool => "bool",
         LayoutType::Str => "char*",
-        LayoutType::List => "list*",
+        LayoutType::List(_) => "list*",
         LayoutType::Nil => panic!(),
     })
 }
@@ -97,7 +97,7 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
             LayoutType::Bool => format!("bool_to_value({e})"),
             LayoutType::Int => format!("int_to_value({e})"),
             LayoutType::Str => format!("str_to_value({e})"),
-            LayoutType::List => format!("list_to_value({e})"),
+            LayoutType::List(_) => format!("list_to_value({e})"),
             LayoutType::Nil => format!("nil_to_value({e})"),
             LayoutType::Value => unreachable!(),
         }
@@ -106,7 +106,7 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
             LayoutType::Bool => format!("value_to_bool({e})"),
             LayoutType::Int => format!("value_to_int({e})"),
             LayoutType::Str => format!("value_to_str({e})"),
-            LayoutType::List => format!("value_to_list({e})"),
+            LayoutType::List(_) => format!("value_to_list({e})"),
             LayoutType::Nil => todo!(),
             LayoutType::Value => unreachable!(),
         }
@@ -123,7 +123,8 @@ fn comp_typed_expr(e: &Expr, ty: LayoutType, fname: Symbol, ast: &AST, tyctxt: &
 fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, LayoutType) {
     match e {
         Expr::NewList => {
-            (format!("new_list()"), LayoutType::List)
+            let ty = tyctxt[&Location::ListItem(e as *const Expr)];
+            (format!("new_list()"), ty)
         },
         Expr::Length(l) => {
             let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
