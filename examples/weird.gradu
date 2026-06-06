@@ -1,0 +1,5 @@
+l = [];
+l.push(l);
+
+# OUT: true
+print(l == (l[0]));

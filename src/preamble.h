@@ -96,6 +96,7 @@ bool is_equal(Value v1, Value v2) {
         case TAG_BOOL: return v1.payload.b == v2.payload.b;
         case TAG_STR: return strcmp(v1.payload.s, v2.payload.s) == 0;
         case TAG_NIL: return true;
+        case TAG_LIST: return v1.payload.l == v2.payload.l; // ptr compare
         default: assert(false);
     }
 }
