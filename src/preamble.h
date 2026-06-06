@@ -10,11 +10,11 @@
 #define TAG_NIL 3
 #define TAG_LIST 4
 
-#define mk_int(x) ((Value) { .tag = TAG_INT, .payload.i = x })
-#define mk_bool(x) ((Value) { .tag = TAG_BOOL, .payload.b = x })
-#define mk_str(x) ((Value) { .tag = TAG_STR, .payload.s = x })
-#define mk_nil() ((Value) { .tag = TAG_NIL })
-#define mk_list(x) ((Value) { .tag = TAG_LIST, .payload.l = x })
+#define int_to_value(x) ((Value) { .tag = TAG_INT, .payload.i = x })
+#define bool_to_value(x) ((Value) { .tag = TAG_BOOL, .payload.b = x })
+#define str_to_value(x) ((Value) { .tag = TAG_STR, .payload.s = x })
+#define nil_to_value() ((Value) { .tag = TAG_NIL })
+#define list_to_value(x) ((Value) { .tag = TAG_LIST, .payload.l = x })
 
 typedef struct Value Value;
 typedef struct list list;
@@ -102,12 +102,12 @@ Value input() {
     exit(EXIT_FAILURE);
 }
 
-int to_int(Value v) {
+int value_to_int(Value v) {
     assert(v.tag == TAG_INT);
     return v.payload.i;
 }
 
-bool to_bool(Value v) {
+bool value_to_bool(Value v) {
     assert(v.tag == TAG_BOOL);
     return v.payload.b;
 }

@@ -94,19 +94,21 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
         e
     } else if new == LayoutType::Value {
         match old {
-            LayoutType::Bool => format!("mk_bool({e})"),
-            LayoutType::Int => format!("mk_int({e})"),
-            LayoutType::Str => format!("mk_str({e})"),
-            LayoutType::List => format!("mk_list({e})"),
+            LayoutType::Bool => format!("bool_to_value({e})"),
+            LayoutType::Int => format!("int_to_value({e})"),
+            LayoutType::Str => format!("str_to_value({e})"),
+            LayoutType::List => format!("list_to_value({e})"),
+            LayoutType::Nil => format!("nil_to_value({e})"),
             LayoutType::Value => unreachable!(),
-            t => panic!("unsupported: {t:?}"),
         }
     } else if old == LayoutType::Value {
         match new {
-            LayoutType::Bool => format!("to_bool({e})"),
-            LayoutType::Int => format!("to_int({e})"),
+            LayoutType::Bool => format!("value_to_bool({e})"),
+            LayoutType::Int => format!("value_to_int({e})"),
+            LayoutType::Str => todo!(),
+            LayoutType::List => todo!(),
+            LayoutType::Nil => todo!(),
             LayoutType::Value => unreachable!(),
-            t => panic!("unsupported: {t:?}"),
         }
     } else {
         panic!("This cast *has* to fail!")
