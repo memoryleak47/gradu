@@ -16,8 +16,14 @@ pub type Symbol = symbol_table::GlobalSymbol;
 use std::collections::HashMap;
 
 fn main() {
-    let s = include_str!("../examples/factorial.gradu");
-    let ast = parse(&s);
+    use std::path::*;
 
+    let filename = std::env::args().nth(1).unwrap_or(String::from("factorial.gradu"));
+    let filename = filename.replace("examples/", "").replace(".gradu", "");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let path = root.join("examples").join(filename + ".gradu");
+    let s = std::fs::read_to_string(path).unwrap();
+
+    let ast = parse(&s);
     comp::comp(&ast);
 }
