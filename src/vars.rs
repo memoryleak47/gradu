@@ -18,6 +18,13 @@ fn get_vars_body(body: &Body, set: &mut HashSet<Symbol>) {
 fn get_vars_stmt(stmt: &Stmt, set: &mut HashSet<Symbol>) {
     use Stmt::*;
     match stmt {
+        ListStore(l, i, v) => {
+            todo!()
+        },
+        Push(l, v) => {
+            todo!()
+        },
+
         Return(e) => get_vars_expr(e, set),
         Assign(v, e) => {
             set.insert(*v);
@@ -41,6 +48,12 @@ fn get_vars_stmt(stmt: &Stmt, set: &mut HashSet<Symbol>) {
 fn get_vars_expr(expr: &Expr, set: &mut HashSet<Symbol>) {
     use Expr::*;
     match expr {
+        NewList => {
+            todo!()
+        },
+        IndexList(l, i) => {
+            todo!()
+        },
         BinOp(_, e1, e2) => {
             get_vars_expr(e1, set);
             get_vars_expr(e2, set);

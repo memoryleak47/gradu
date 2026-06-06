@@ -6,6 +6,7 @@ pub struct TypeLattice {
     might_be_nil: bool,
     might_be_str: bool,
     might_be_int: bool,
+    might_be_list: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -14,6 +15,7 @@ pub enum LayoutType {
     Nil,
     Str,
     Int,
+    List,
     Value, // "any"
 }
 
@@ -64,6 +66,12 @@ fn ty_infer_body(body: &Body, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
 
 fn ty_infer_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt) {
     match stmt {
+        Stmt::ListStore(l, i, v) => {
+            todo!()
+        },
+        Stmt::Push(l, v) => {
+            todo!()
+        },
         Stmt::Assign(v, e) => {
             let r = ty_infer_expr(e, fname, ast, ctxt);
             let l = Location::Var(fname, *v);
@@ -97,6 +105,12 @@ fn add(v: Location, ty: TypeLattice, ctxt: &mut TyLatticeCtxt) {
 
 fn ty_infer_expr(expr: &Expr, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt) -> TypeLattice {
     match expr {
+        Expr::NewList => {
+            todo!()
+        },
+        Expr::IndexList(l, i) => {
+            todo!()
+        },
         Expr::FnCall(f, args) => {
             let fndef = &ast.fns.iter().find(|x| &x.name == f).unwrap();
 
@@ -138,6 +152,7 @@ impl TypeLattice {
             might_be_nil: true,
             might_be_str: true,
             might_be_int: true,
+            might_be_list: true,
         }
     }
 
@@ -147,6 +162,7 @@ impl TypeLattice {
             might_be_nil: false,
             might_be_str: false,
             might_be_int: false,
+            might_be_list: false,
         }
     }
 
@@ -156,16 +172,18 @@ impl TypeLattice {
             might_be_nil: x.might_be_nil|| y.might_be_nil,
             might_be_str: x.might_be_str || y.might_be_str,
             might_be_int: x.might_be_int || y.might_be_int,
+            might_be_list: x.might_be_list || y.might_be_list,
         }
     }
 }
 
 fn layout(x: TypeLattice) -> LayoutType {
-    if (x.might_be_int) as u8 + (x.might_be_bool as u8) + (x.might_be_nil as u8) + (x.might_be_str as u8) != 1 {
+    if (x.might_be_int) as u8 + (x.might_be_bool as u8) + (x.might_be_nil as u8) + (x.might_be_str as u8) + (x.might_be_list as u8) != 1 {
         LayoutType::Value
     } else if x.might_be_bool { LayoutType::Bool }
     else if x.might_be_int { LayoutType::Int }
     else if x.might_be_str { LayoutType::Str }
     else if x.might_be_nil { LayoutType::Nil }
+    else if x.might_be_list { LayoutType::List }
     else { LayoutType::Value }
 }

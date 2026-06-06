@@ -40,6 +40,7 @@ fn stringify_layout(ty: LayoutType) -> String {
         LayoutType::Int => "int",
         LayoutType::Bool => "bool",
         LayoutType::Str => "char*",
+        LayoutType::List => "list*",
         LayoutType::Nil => panic!(),
     })
 }
@@ -118,6 +119,12 @@ fn comp_typed_expr(e: &Expr, ty: LayoutType, fname: Symbol, ast: &AST, tyctxt: &
 
 fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, LayoutType) {
     match e {
+        Expr::NewList => {
+            todo!()
+        },
+        Expr::IndexList(l, i) => {
+            todo!()
+        },
         Expr::FnCall(f, args) => {
             let ff = ast.fns.iter().find(|x| &x.name == f).unwrap();
             let mut args_str = String::new();
@@ -191,6 +198,12 @@ fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, La
 fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usize) -> String {
     let spaces = "    ".repeat(level+1);
     match stmt {
+        Stmt::ListStore(l, i, v) => {
+            todo!()
+        },
+        Stmt::Push(l, v) => {
+            todo!()
+        },
         Stmt::Assign(v, e) => {
             let ty = tyctxt[&Location::Var(fname, *v)];
             let e = comp_typed_expr(e, ty, fname, ast, tyctxt);
