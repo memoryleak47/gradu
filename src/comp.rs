@@ -90,6 +90,7 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
         match old {
             LayoutType::Bool => format!("mk_bool({e})"),
             LayoutType::Int => format!("mk_int({e})"),
+            LayoutType::Str => format!("mk_str({e})"),
             LayoutType::Value => unreachable!(),
             _ => panic!("unsupported"),
         }

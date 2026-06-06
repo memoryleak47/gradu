@@ -1,3 +1,5 @@
+# factorial
+
 fn factorial(x) {
     if (x == 0) {
         return 1;
@@ -5,5 +7,7 @@ fn factorial(x) {
         return x * factorial(x-1);
     }
 }
+
+# OUT: 14
 
 print(factorial(10) % 17);
