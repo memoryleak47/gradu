@@ -202,7 +202,10 @@ fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usiz
     let spaces = "    ".repeat(level+1);
     match stmt {
         Stmt::ListStore(l, i, v) => {
-            todo!()
+            let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
+            let i = comp_typed_expr(i, LayoutType::Int, fname, ast, tyctxt);
+            let v = comp_typed_expr(v, LayoutType::Value, fname, ast, tyctxt);
+            format!("{spaces}store_list({l}, {i}, {v});\n")
         },
         Stmt::Push(l, v) => {
             let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);

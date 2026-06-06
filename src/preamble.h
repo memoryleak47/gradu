@@ -47,6 +47,11 @@ void push_list(list* l, Value v) {
     l->elements[l->length-1] = v;
 }
 
+void store_list(list* l, int i, Value v) {
+    assert(l->length > i);
+    l->elements[i] = v;
+}
+
 Value index_list(list* l, int i) {
     assert(l->length > i);
     return l->elements[i];

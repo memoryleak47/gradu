@@ -1,7 +1,8 @@
 # list.gradu
 
 l = [];
-l.push(42);
+l.push(63);
+l[0] = (l[0]) - 21;
 
 # OUT: 42
 print(l[0]);
