@@ -112,6 +112,8 @@ fn ty_infer_expr(expr: &Expr, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
             TypeLattice { might_be_list: true, ..TypeLattice::bot() }
         },
         Expr::IndexList(l, i) => {
+            let _l = ty_infer_expr(l, fname, ast, ctxt);
+            let _i = ty_infer_expr(i, fname, ast, ctxt);
             TypeLattice::top() // TODO make more precise
         },
         Expr::FnCall(f, args) => {

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function run() {
-    cargo r -q -- "$1"
+    cargo r -q -- "$1" 2>/dev/null
 }
 
 function output() {

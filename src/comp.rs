@@ -97,15 +97,16 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
             LayoutType::Bool => format!("mk_bool({e})"),
             LayoutType::Int => format!("mk_int({e})"),
             LayoutType::Str => format!("mk_str({e})"),
+            LayoutType::List => format!("mk_list({e})"),
             LayoutType::Value => unreachable!(),
-            _ => panic!("unsupported"),
+            t => panic!("unsupported: {t:?}"),
         }
     } else if old == LayoutType::Value {
         match new {
             LayoutType::Bool => format!("to_bool({e})"),
             LayoutType::Int => format!("to_int({e})"),
             LayoutType::Value => unreachable!(),
-            _ => panic!("unsupported"),
+            t => panic!("unsupported: {t:?}"),
         }
     } else {
         panic!("This cast *has* to fail!")
@@ -120,10 +121,12 @@ fn comp_typed_expr(e: &Expr, ty: LayoutType, fname: Symbol, ast: &AST, tyctxt: &
 fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, LayoutType) {
     match e {
         Expr::NewList => {
-            todo!()
+            (format!("new_list()"), LayoutType::List)
         },
         Expr::IndexList(l, i) => {
-            todo!()
+            let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
+            let i = comp_typed_expr(i, LayoutType::Int, fname, ast, tyctxt);
+            (format!("index_list({l}, {i})"), LayoutType::Value)
         },
         Expr::FnCall(f, args) => {
             let ff = ast.fns.iter().find(|x| &x.name == f).unwrap();
@@ -202,7 +205,9 @@ fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usiz
             todo!()
         },
         Stmt::Push(l, v) => {
-            todo!()
+            let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
+            let v = comp_typed_expr(v, LayoutType::Value, fname, ast, tyctxt);
+            format!("{spaces}push_list({l}, {v});\n")
         },
         Stmt::Assign(v, e) => {
             let ty = tyctxt[&Location::Var(fname, *v)];

@@ -8,20 +8,49 @@
 #define TAG_BOOL 1
 #define TAG_STR 2
 #define TAG_NIL 3
+#define TAG_LIST 4
 
 #define mk_int(x) ((Value) { .tag = TAG_INT, .payload.i = x })
 #define mk_bool(x) ((Value) { .tag = TAG_BOOL, .payload.b = x })
 #define mk_str(x) ((Value) { .tag = TAG_STR, .payload.s = x })
-#define mk_nil() ((Value) { .tag = TAG_NIL})
+#define mk_nil() ((Value) { .tag = TAG_NIL })
+#define mk_list(x) ((Value) { .tag = TAG_LIST, .payload.l = x })
 
-typedef struct {
+typedef struct Value Value;
+typedef struct list list;
+
+struct list {
+    Value* elements;
+    int length;
+};
+
+struct Value {
     char tag;
     union {
         int i;
         bool b;
         char* s;
+        list* l;
     } payload;
-} Value;
+};
+
+list* new_list() {
+    list* l = malloc(sizeof(list));
+    l->length = 0;
+    l->elements = nullptr;
+    return l;
+}
+
+void push_list(list* l, Value v) {
+    l->length++;
+    l->elements = realloc(l->elements, sizeof(Value) * l->length);
+    l->elements[l->length-1] = v;
+}
+
+Value index_list(list* l, int i) {
+    assert(l->length > i);
+    return l->elements[i];
+}
 
 void print_value(Value v) {
     if (v.tag == TAG_INT) {
