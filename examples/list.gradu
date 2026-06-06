@@ -1,0 +1,7 @@
+# list.gradu
+
+l = [];
+l.push(42);
+
+# OUT: 42
+print(l[0]);
