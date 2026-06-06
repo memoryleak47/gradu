@@ -125,7 +125,7 @@ fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, La
     match e {
         Expr::NewList => {
             let ty = get_ty(Location::ListItem(e as *const Expr), tyctxt);
-            (format!("new_list()"), ty)
+            (format!("new_list()"), LayoutType::List(Box::new(ty)))
         },
         Expr::Length(l) => {
             let l = comp_typed_expr(l, LayoutType::List(todo!()), fname, ast, tyctxt);
