@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -29,6 +28,13 @@ struct Value {
     } payload;
 };
 
+void check(bool b, char* s) {
+    if (!b) {
+        printf("ERROR: %s\n", s);
+        exit(1);
+    }
+}
+
 void print_value(Value v) {
     if (v.tag == TAG_INT) {
         printf("%i\n", v.payload.i);
@@ -43,8 +49,7 @@ void print_value(Value v) {
     } else if (v.tag == TAG_NIL) {
         printf("nil\n");
     } else {
-        printf("unknown value!\n");
-        assert(false);
+        check(false, "unknown value!");
     }
 }
 
@@ -75,17 +80,17 @@ Value input() {
 }
 
 int value_to_int(Value v) {
-    assert(v.tag == TAG_INT);
+    check(v.tag == TAG_INT, "value_to_int failed!");
     return v.payload.i;
 }
 
 bool value_to_bool(Value v) {
-    assert(v.tag == TAG_BOOL);
+    check(v.tag == TAG_BOOL, "value_to_bool failed!");
     return v.payload.b;
 }
 
 list* value_to_list(Value v) {
-    assert(v.tag == TAG_LIST);
+    check(v.tag == TAG_LIST, "value_to_list failed!");
     return v.payload.l;
 }
 
@@ -97,6 +102,6 @@ bool is_equal(Value v1, Value v2) {
         case TAG_STR: return strcmp(v1.payload.s, v2.payload.s) == 0;
         case TAG_NIL: return true;
         case TAG_LIST: return v1.payload.l == v2.payload.l; // ptr compare
-        default: assert(false);
+        default: check(false, "is_equal on unknown tag!");
     }
 }

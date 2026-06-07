@@ -27,12 +27,12 @@ void push_list(list* l, T v) {
 }
 
 void store_list(list* l, int i, T v) {
-    assert(l->length > i);
+    check(l->length > i, "store_list out of range!");
     l->elements[i] = v;
 }
 
 T index_list(list* l, int i) {
-    assert(l->length > i);
+    check(l->length > i, "index_list out of range!");
     return l->elements[i];
 }
 
