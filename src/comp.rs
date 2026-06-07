@@ -9,7 +9,7 @@ pub fn comp(ast: &AST) {
     let exe_c = &format!("{root}/exe.c");
 
     std::fs::write(exe_c, compiled).unwrap();
-    let co = Command::new("gcc").args([exe_c, "-o", exe]).output().unwrap().stderr;
+    let co = Command::new("gcc").args([exe_c, "-o", exe, "-O3"]).output().unwrap().stderr;
     let co2 = String::from_utf8_lossy(&co);
     if !co2.is_empty() {
         println!("compiler error: {co2:?}");
