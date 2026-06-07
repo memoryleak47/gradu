@@ -1,0 +1,42 @@
+fn uf_add(uf) {
+    i = (uf.length);
+    uf.push(i);
+    return i;
+}
+
+fn uf_find(uf, x) {
+    while ((uf[x]) != x) {
+        x = uf[x];
+    }
+    return x;
+}
+
+fn uf_union(uf, x, y) {
+    x = uf_find(uf, x);
+    y = uf_find(uf, y);
+    if (x != y) {
+        uf[x] = y;
+    } else {}
+}
+
+uf = [];
+
+a = uf_add(uf);
+b = uf_add(uf);
+c = uf_add(uf);
+d = uf_add(uf);
+e = uf_add(uf);
+f = uf_add(uf);
+g = uf_add(uf);
+
+t = uf_union(uf, a, b);
+t = uf_union(uf, b, d);
+t = uf_union(uf, c, g);
+t = uf_union(uf, c, d);
+t = uf_union(uf, b, f);
+
+# OUT: true
+print(uf_find(uf, a) == uf_find(uf, g));
+
+# OUT: false
+print(uf_find(uf, a) == uf_find(uf, e));

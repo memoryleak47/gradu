@@ -161,10 +161,14 @@ fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, La
             (format!("fn_{f}({args_str})"), ty)
         },
         Expr::BinOp(op, e1, e2) => {
-            if let BinOpKind::Equ = op {
+            if let BinOpKind::Equ|BinOpKind::Ne = op {
                 let (e1, t1) = comp_expr(e1, fname, ast, tyctxt);
                 let (e2, t2) = comp_expr(e2, fname, ast, tyctxt);
-                return (comp_equ(e1, t1, e2, t2), LayoutType::Bool)
+                let mut out = comp_equ(e1, t1, e2, t2);
+                if let BinOpKind::Ne = op {
+                    out = format!("(!{out})");
+                }
+                return (out, LayoutType::Bool)
             }
 
             let e1 = comp_typed_expr(e1, LayoutType::Int, fname, ast, tyctxt);
@@ -190,6 +194,7 @@ fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, La
                     (format!("({e1} - {e2})"), LayoutType::Int)
                 },
                 BinOpKind::Equ => unreachable!(),
+                BinOpKind::Ne => unreachable!(),
             }
         },
         Expr::IntLit(i) => {

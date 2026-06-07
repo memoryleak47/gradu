@@ -46,4 +46,5 @@ pub enum BinOpKind {
     Mul,
     Minus,
     Equ,
+    Ne, // !=
 }

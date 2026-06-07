@@ -68,6 +68,7 @@ pub BinOp: BinOpKind = {
     "==" => BinOpKind::Equ,
     "*" => BinOpKind::Mul,
     "-" => BinOpKind::Minus,
+    "!=" => BinOpKind::Ne,
 }
 
 pub Stmt: Stmt = {

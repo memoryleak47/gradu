@@ -149,7 +149,7 @@ fn ty_infer_expr(expr: &Expr, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
             let _l = ty_infer_expr(l, fname, ast, ctxt);
             let _r = ty_infer_expr(r, fname, ast, ctxt);
             match kind {
-                BinOpKind::Equ | BinOpKind::Lt | BinOpKind::Gt =>
+                BinOpKind::Equ | BinOpKind::Ne | BinOpKind::Lt | BinOpKind::Gt =>
                     TypeLattice { might_be_bool: true, ..TypeLattice::bot() },
                 BinOpKind::Plus | BinOpKind::Mod | BinOpKind::Minus | BinOpKind::Mul =>
                     TypeLattice { might_be_int: true, ..TypeLattice::bot() },
