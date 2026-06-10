@@ -14,6 +14,7 @@ pub struct FnDef {
 
 #[derive(Debug)]
 pub enum Stmt {
+    Global(Symbol),
     Return(Expr),
     Assign(Symbol, Expr),
     Push(/*list*/Expr, /*value*/Expr),

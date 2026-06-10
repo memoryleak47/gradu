@@ -1,0 +1,16 @@
+counter = 0;
+
+fn fresh_int() {
+    global counter;
+
+    out = counter;
+    counter = counter + 1;
+    return otu;
+}
+
+x = fresh_int();
+y = fresh_int();
+z = fresh_int();
+print(x);
+print(y);
+print(z);

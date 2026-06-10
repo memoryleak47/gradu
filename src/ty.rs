@@ -25,6 +25,7 @@ type TyLatticeCtxt = HashMap<Location, TypeLattice>;
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum Location {
     Var(/*fn*/ Symbol, /*var*/ Symbol), // also includes fn args
+    GlobalVar(/*var*/ Symbol),
     RetVal(/*fn*/ Symbol),
     ListItem,
 }
@@ -76,6 +77,7 @@ fn ty_infer_body(body: &Body, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
 
 fn ty_infer_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt) {
     match stmt {
+        Stmt::Global(_) => {},
         Stmt::ListStore(l, i, v) => {
             let _l = ty_infer_expr(l, fname, ast, ctxt);
             let _i = ty_infer_expr(i, fname, ast, ctxt);

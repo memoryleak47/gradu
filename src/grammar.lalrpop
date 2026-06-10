@@ -72,6 +72,7 @@ pub BinOp: BinOpKind = {
 }
 
 pub Stmt: Stmt = {
+    "global" <v:Ident> ";" => Stmt::Global(v),
     <l:Expr> "." "push" "(" <v:Expr> ")" ";" => Stmt::Push(l, v),
     <l:SafeExpr> "[" <i:SafeExpr> "]" "=" <v:Expr> ";" => Stmt::ListStore(l, i, v),
     <v:Ident> "=" <e:Expr> ";" => Stmt::Assign(v, e),

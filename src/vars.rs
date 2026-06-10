@@ -18,6 +18,7 @@ fn get_vars_body(body: &Body, set: &mut HashSet<Symbol>) {
 fn get_vars_stmt(stmt: &Stmt, set: &mut HashSet<Symbol>) {
     use Stmt::*;
     match stmt {
+        Global(_) => {},
         ListStore(l, i, v) => {
             get_vars_expr(l, set);
             get_vars_expr(i, set);

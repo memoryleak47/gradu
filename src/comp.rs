@@ -224,6 +224,7 @@ fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, La
 fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usize) -> String {
     let spaces = "    ".repeat(level+1);
     match stmt {
+        Stmt::Global(_) => String::new(),
         Stmt::ListStore(l, i, v) => {
             let ty = get_ty(Location::ListItem, tyctxt);
             let l = comp_typed_expr(l, LayoutType::List, fname, ast, tyctxt);
