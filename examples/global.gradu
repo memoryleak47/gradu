@@ -1,3 +1,5 @@
+# global.gradu
+
 counter = 0;
 
 fn fresh_int() {
@@ -5,11 +7,14 @@ fn fresh_int() {
 
     out = counter;
     counter = counter + 1;
-    return otu;
+    return out;
 }
 
+# OUT: 0
 x = fresh_int();
+# OUT: 1
 y = fresh_int();
+# OUT: 2
 z = fresh_int();
 print(x);
 print(y);
