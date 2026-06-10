@@ -4,50 +4,22 @@ use crate::*;
 grammar;
 
 pub AST: AST = {
-    <items:Item*> => {
-        let mut main_body = Vec::new();
-        let mut fns = Vec::new();
-        for x in items {
-            match x {
-                Ok(x) => fns.push(x),
-                Err(x) => main_body.push(x),
-            }
-        }
-        fns.push(FnDef {
-            name: Symbol::new("main"),
-            args: Vec::new(),
-            body: main_body
-        });
-        AST {
-            fns,
-        }
-    }
-};
-
-pub Item: Result<FnDef, Stmt> = {
-    <x:FnDef> => Ok(x),
-    <x:Stmt> => Err(x),
-};
-
-pub FnDef: FnDef = {
-    "fn" <name:Ident> "(" <args:Args> ")" "{" <body:Body> "}" => FnDef { name, args, body },
+    <stmts:Stmt*> => stmts,
 };
 
 pub Args: Vec<Symbol> = Comma<Ident>;
-
-pub Body: Body = {
-    <s:Stmt*> => s,
-};
 
 pub Expr: Expr = {
     <e:SafeExpr> => e,
     <e1:SafeExpr> <binop:BinOp> <e2:SafeExpr> => Expr::BinOp(binop, Box::new(e1), Box::new(e2)),
     <l:SafeExpr> "[" <i:SafeExpr> "]" => Expr::IndexList(Box::new(l), Box::new(i)),
+    <f:SafeExpr> "(" <args:Comma<Expr>> ")" => Expr::FnCall(Box::new(f), args),
 };
 
 // SafeExpr is an Expr that can only be "parsed in one way" in any context.
 // A non-safe Expr is something like `a + b`, as `c*a + b` will be parsed wrongly.
 pub SafeExpr: Expr = {
+    "fn" "(" <args:Args> ")" "{" <body:AST> "}" => Expr::FnDef(args, body),
     "[" "]" => Expr::NewList,
     <n:Num> => Expr::IntLit(n),
     <s:Str> => Expr::StringLit(s),
@@ -56,7 +28,6 @@ pub SafeExpr: Expr = {
     "input" "(" ")" => Expr::Input,
     "true" => Expr::BoolLit(true),
     "false" => Expr::BoolLit(false),
-    <f:Ident> "(" <args:Comma<Expr>> ")" => Expr::FnCall(f, args),
     "(" <l:SafeExpr> "." "length" ")" => Expr::Length(Box::new(l)),
 };
 
@@ -77,8 +48,8 @@ pub Stmt: Stmt = {
     <l:SafeExpr> "[" <i:SafeExpr> "]" "=" <v:Expr> ";" => Stmt::ListStore(l, i, v),
     <v:Ident> "=" <e:Expr> ";" => Stmt::Assign(v, e),
     "print" "(" <e:Expr> ")" ";" => Stmt::Print(e),
-    "if" <c: Expr> "{" <then_:Body> "}" "else" "{" <else_:Body> "}" => Stmt::If(c, then_, else_),
-    "while" <c:Expr> "{" <body:Body> "}" => Stmt::While(c, body),
+    "if" <c: Expr> "{" <then_:AST> "}" "else" "{" <else_:AST> "}" => Stmt::If(c, then_, else_),
+    "while" <c:Expr> "{" <body:AST> "}" => Stmt::While(c, body),
     "return" <e:Expr> ";" => Stmt::Return(e),
 };
 

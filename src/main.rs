@@ -7,11 +7,11 @@ pub use ast::*;
 mod parse;
 pub use parse::*;
 
-mod ty;
-pub use ty::*;
+// mod ty;
+// pub use ty::*;
 
-mod vars;
-pub use vars::*;
+// mod vars;
+// pub use vars::*;
 
 extern crate symbol_table;
 pub type Symbol = symbol_table::GlobalSymbol;
@@ -28,6 +28,7 @@ fn main() {
     let s = std::fs::read_to_string(path).unwrap();
 
     let ast = parse(&s);
-    let tyctxt = ty_infer(ast);
+    // let tyctxt = ty_infer(ast);
     // comp::comp(&ast);
+    dbg!(&ast);
 }
