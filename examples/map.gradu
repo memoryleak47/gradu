@@ -1,0 +1,36 @@
+# map
+
+map = fn(l, f) {
+    l2 = [];
+    i = 0;
+    while (i < l.length) {
+        l2.push(f(l[i]));
+        i = i+1;
+    }
+    return l2;
+};
+
+sum = fn(l) {
+    s = 0;
+    i = 0;
+    while (i < l.length) {
+        s = s + l[i];
+        i = i+1;
+    }
+    return s;
+};
+
+l = [];
+
+l.push(1);
+l.push(2);
+l.push(3);
+
+
+# OUT: 9
+shift = fn(x) { return x+1; };
+print(sum(map(l, shift)));
+
+# OUT: 12
+double = fn(x) { return x*2; };
+print(sum(map(l, double)));
