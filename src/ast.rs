@@ -1,16 +1,6 @@
 use crate::*;
 
-pub type Body = Vec<Stmt>;
-
-pub struct AST {
-    pub fns: Vec<FnDef>,
-}
-
-pub struct FnDef {
-    pub name: Symbol,
-    pub args: Vec<Symbol>,
-    pub body: Body,
-}
+pub type AST = Vec<Stmt>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Stmt {
@@ -19,13 +9,14 @@ pub enum Stmt {
     Assign(Symbol, Expr),
     Push(/*list*/Expr, /*value*/Expr),
     ListStore(/*list*/Expr, /*int*/Expr, /*v*/Expr), // list[int] = v
-    If(Expr, /*then*/ Body, /*else*/ Body),
-    While(Expr, Body),
+    If(Expr, /*then*/ AST, /*else*/ AST),
+    While(Expr, AST),
     Print(Expr),
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Expr {
+    FnDef(/*args*/Vec<Symbol>, /*body*/AST),
     NewList,
     IndexList(/*list*/Box<Expr>, /*index*/Box<Expr>),
     BinOp(BinOpKind, Box<Expr>, Box<Expr>),
@@ -35,7 +26,7 @@ pub enum Expr {
     BoolLit(bool),
     Var(Symbol),
     Input,
-    FnCall(Symbol, Vec<Expr>),
+    FnCall(Box<Expr>, Vec<Expr>),
 }
 
 #[derive(Debug, PartialEq, Eq)]
