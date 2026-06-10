@@ -42,7 +42,7 @@ pub fn ty_infer(ast: &AST) -> TyCtxt {
         m.insert(l, TypeLattice::bot());
 
         for v in get_vars(f) {
-            let l = Location::Var(f.name, v);
+            let l = get_var_loc(f.name, v, ast);
             m.insert(l, TypeLattice::bot());
         }
     }
@@ -91,7 +91,7 @@ fn ty_infer_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
         },
         Stmt::Assign(v, e) => {
             let r = ty_infer_expr(e, fname, ast, ctxt);
-            let l = Location::Var(fname, *v);
+            let l = get_var_loc(fname, *v, ast);
             add(l, &r, ctxt);
         },
         Stmt::Return(e) => {
@@ -161,7 +161,7 @@ fn ty_infer_expr(expr: &Expr, fname: Symbol, ast: &AST, ctxt: &mut TyLatticeCtxt
         Expr::StringLit(_) => TypeLattice { might_be_str: true, ..TypeLattice::bot() },
         Expr::BoolLit(_) => TypeLattice { might_be_bool: true, ..TypeLattice::bot() },
         Expr::Var(v) => {
-            let l = Location::Var(fname, *v);
+            let l = get_var_loc(fname, *v, ast);
             get(l, ctxt)
         }
         Expr::Input => TypeLattice {
@@ -205,4 +205,23 @@ fn layout(x: TypeLattice) -> LayoutType {
     else if x.might_be_nil { LayoutType::Nil }
     else if x.might_be_list { LayoutType::List }
     else { LayoutType::Value }
+}
+
+pub fn is_global_var(fname: Symbol, varname: Symbol, ast: &AST) -> bool {
+    if fname == Symbol::new("main") { return true }
+    let f = ast.fns.iter().find(|x| x.name == fname).unwrap();
+    if f.body.contains(&Stmt::Global(varname)) { return true }
+
+    // In python, if you only read a variable without ever writing to it, it's implicitly global.
+    // I'll ignore that for now though.
+
+    false
+}
+
+pub fn get_var_loc(fname: Symbol, varname: Symbol, ast: &AST) -> Location {
+    if is_global_var(fname, varname, ast) {
+        Location::GlobalVar(varname)
+    } else {
+        Location::Var(fname, varname)
+    }
 }

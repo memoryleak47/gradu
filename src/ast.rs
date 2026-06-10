@@ -12,7 +12,7 @@ pub struct FnDef {
     pub body: Body,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Stmt {
     Global(Symbol),
     Return(Expr),
@@ -24,7 +24,7 @@ pub enum Stmt {
     Print(Expr),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Expr {
     NewList,
     IndexList(/*list*/Box<Expr>, /*index*/Box<Expr>),
@@ -38,7 +38,7 @@ pub enum Expr {
     FnCall(Symbol, Vec<Expr>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum BinOpKind {
     Lt,
     Gt,

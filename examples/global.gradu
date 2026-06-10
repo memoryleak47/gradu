@@ -10,12 +10,29 @@ fn fresh_int() {
     return out;
 }
 
-# OUT: 0
+fn do_stuff() {
+    x = fresh_int();
+    print(x);
+
+    y = fresh_int();
+    print(y);
+}
+
+_ = do_stuff();
+
 x = fresh_int();
-# OUT: 1
 y = fresh_int();
-# OUT: 2
 z = fresh_int();
 print(x);
 print(y);
 print(z);
+
+_ = do_stuff();
+
+# OUT: 0
+# OUT: 1
+# OUT: 2
+# OUT: 3
+# OUT: 4
+# OUT: 5
+# OUT: 6

@@ -25,15 +25,28 @@ fn compile_ast(ast: &AST) -> String {
 
     let mut compiled = String::from(include_str!("preamble.h"));
 
+    // lists
     let item_ty = get_ty(Location::ListItem, &tyctxt);
     let item_ty = stringify_layout(&item_ty);
     let list_h = include_str!("list.h").replace("T", &item_ty);
     compiled.push_str(&list_h);
 
+    compiled.push_str("\n");
+    // globals
+    for (loc, layout) in &tyctxt {
+        if let Location::GlobalVar(v) = loc {
+            let layout = stringify_layout(layout);
+            compiled.push_str(&format!("{layout} {v};\n"));
+        }
+    }
+    compiled.push_str("\n");
+
+    // compile each fn
     for f in &ast.fns {
         compiled.push_str(&compile_fn(f, ast, &tyctxt));
     }
 
+    // entry point
     compiled.push_str("int main() { fn_main(); return 0; }");
 
     compiled
@@ -72,7 +85,7 @@ fn compile_fn(f: &FnDef, ast: &AST, tyctxt: &TyCtxt) -> String {
     // local vars
     let mut varprefix = String::new();
     for (loc, varty) in tyctxt.iter() {
-        if let Location::Var(ff, x) = loc && *ff == name && !f.args.contains(x) {
+        if let Location::Var(ff, x) = loc && *ff == name && !f.args.contains(x) && !is_global_var(name, *x, ast) {
             let varty = stringify_layout(varty);
             varprefix.push_str(&format!("    {varty} {x};\n"));
         }
@@ -211,7 +224,7 @@ fn comp_expr(e: &Expr, fname: Symbol, ast: &AST, tyctxt: &TyCtxt) -> (String, La
             }
         },
         Expr::Var(v) => {
-            let l = Location::Var(fname, *v);
+            let l = get_var_loc(fname, *v, ast);
             let ty = get_ty(l, tyctxt);
             (format!("{v}"), ty)
         },
@@ -239,7 +252,7 @@ fn comp_stmt(stmt: &Stmt, fname: Symbol, ast: &AST, tyctxt: &TyCtxt, level: usiz
             format!("{spaces}push_list({l}, {v});\n")
         },
         Stmt::Assign(v, e) => {
-            let loc = Location::Var(fname, *v);
+            let loc = get_var_loc(fname, *v, ast);
             let ty = get_ty(loc, tyctxt);
             let e = comp_typed_expr(e, ty, fname, ast, tyctxt);
             format!("{spaces}{v} = {e};\n")
