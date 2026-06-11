@@ -141,21 +141,50 @@ fn ty_infer_expr(expr: &Expr, fid: FnId, ast: &AST, ctxt: &mut TyLatticeCtxt) ->
 
             let mut out = TypeLattice::bot();
 
+            let mut callee_options = Vec::new();
             for callee_fid in f.fn_options.iter().copied() {
                 let callee_fdef = &ast.fns[callee_fid];
                 if callee_fdef.args.len() != args.len() { continue }
-
-                for (argname, argexpr) in callee_fdef.args.iter().zip(args) {
-                    let argexpr_ty = ty_infer_expr(argexpr, fid, ast, ctxt);
-                    let l = Location::Var(callee_fid, *argname);
-                    add(l, &argexpr_ty, ctxt);
-                }
-
-                let l = Location::RetVal(callee_fid);
-                out = TypeLattice::merge(&out, &get(l, ctxt));
+                callee_options.push(callee_fid);
             }
 
-            out
+            for i in 0..args.len() {
+                // All of those fns need to have the same layout.
+                // We guarantee this by giving them the same TypeLattice.
+                let mut argty = ty_infer_expr(&args[i], fid, ast, ctxt);
+
+                // accumulate argty
+                for &callee_fid in &callee_options {
+                    let callee_fdef = &ast.fns[callee_fid];
+                    let l = Location::Var(callee_fid, callee_fdef.args[i]);
+                    argty = TypeLattice::merge(&argty, &get(l, ctxt));
+                }
+
+                // write back argty.
+                for &callee_fid in &callee_options {
+                    let callee_fdef = &ast.fns[callee_fid];
+                    let l = Location::Var(callee_fid, callee_fdef.args[i]);
+                    add(l, &argty, ctxt);
+                }
+            }
+
+            let mut callee_ret_type = TypeLattice::bot();
+
+            // accumulate compute ret type
+            for &callee_fid in &callee_options {
+                let callee_fdef = &ast.fns[callee_fid];
+                let l = Location::RetVal(callee_fid);
+                callee_ret_type = TypeLattice::merge(&callee_ret_type, &get(l, ctxt));
+            }
+
+            // write back ret type
+            for &callee_fid in &callee_options {
+                let callee_fdef = &ast.fns[callee_fid];
+                let l = Location::RetVal(callee_fid);
+                add(l, &callee_ret_type, ctxt);
+            }
+
+            callee_ret_type
         },
         Expr::BinOp(kind, l, r) => {
             let _l = ty_infer_expr(l, fid, ast, ctxt);

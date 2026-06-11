@@ -1,0 +1,12 @@
+a = fn(x) { return x+1; };
+b = fn(x) { return "ok"; };
+
+_ = b("wow");
+
+if (true) {
+    f = a;
+} else {
+    f = b;
+}
+
+print(f(41));
