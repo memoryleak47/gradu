@@ -1,0 +1,9 @@
+# mean5.gradu
+
+f = fn(x) {};
+
+# in original layouting, this infinite loops
+_ = f(f);
+
+# OUT: pls reach me
+print("pls reach me");

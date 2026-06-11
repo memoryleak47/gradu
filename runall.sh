@@ -1,6 +1,7 @@
 #!/bin/bash
 
 function run() {
+    rm -f exe exe.c
     cargo r -q -- "$1" 2>/dev/null
 }
 
