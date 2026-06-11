@@ -119,7 +119,7 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
             LayoutType::Str => format!("str_to_value({e})"),
             LayoutType::List => format!("list_to_value({e})"),
             LayoutType::Nil => format!("nil_to_value({e})"),
-            LayoutType::Fn(..) => format!("fn_to_value({e})"),
+            LayoutType::Fn(..) => todo!(),
             LayoutType::Value => unreachable!(),
         }
     } else if old == LayoutType::Value {
@@ -129,10 +129,7 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
             LayoutType::Str => format!("value_to_str({e})"),
             LayoutType::List => format!("value_to_list({e})"),
             LayoutType::Nil => todo!(),
-            LayoutType::Fn(..) => {
-                let s = stringify_layout(&new);
-                format!("(({s}) value_to_fn({e}))")
-            },
+            LayoutType::Fn(..) => todo!(),
             LayoutType::Value => unreachable!(),
         }
     } else {
