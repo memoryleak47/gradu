@@ -1,0 +1,78 @@
+use crate::*;
+
+pub fn visit_body(body: &Body, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnMut(&Stmt)) {
+    for s in body {
+        visit_stmt(s, f_expr, f_stmt);
+    }
+}
+
+fn visit_stmt(stmt: &Stmt, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnMut(&Stmt)) {
+    use Stmt::*;
+
+    f_stmt(stmt);
+
+    match stmt {
+        Global(_) => {},
+        ListStore(l, i, v) => {
+            visit_expr(l, f_expr, f_stmt);
+            visit_expr(i, f_expr, f_stmt);
+            visit_expr(v, f_expr, f_stmt);
+        },
+        Push(l, v) => {
+            visit_expr(l, f_expr, f_stmt);
+            visit_expr(v, f_expr, f_stmt);
+        },
+
+        Return(e) => {
+            visit_expr(e, f_expr, f_stmt);
+        },
+        Assign(v, e) => {
+            visit_expr(e, f_expr, f_stmt);
+        },
+        If(c, then_, else_) => {
+            visit_expr(c, f_expr, f_stmt);
+            visit_body(then_, f_expr, f_stmt);
+            visit_body(else_, f_expr, f_stmt);
+        },
+        While(c, b) => {
+            visit_expr(c, f_expr, f_stmt);
+            visit_body(b, f_expr, f_stmt);
+        },
+        Print(e) => {
+            visit_expr(e, f_expr, f_stmt);
+        },
+    }
+}
+
+fn visit_expr(expr: &Expr, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnMut(&Stmt)) {
+    use Expr::*;
+
+    f_expr(expr);
+
+    match expr {
+        FnId(_) => {},
+        NewList => {},
+        Length(l) => {
+            visit_expr(l, f_expr, f_stmt);
+        },
+        IndexList(l, i) => {
+            visit_expr(l, f_expr, f_stmt);
+            visit_expr(i, f_expr, f_stmt);
+        },
+        BinOp(_, e1, e2) => {
+            visit_expr(e1, f_expr, f_stmt);
+            visit_expr(e2, f_expr, f_stmt);
+        },
+        IntLit(_) => {},
+        StringLit(_) => {},
+        BoolLit(_) => {},
+        Var(v) => {},
+        Input => {},
+        FnCall(f, es) => {
+            visit_expr(f, f_expr, f_stmt);
+            for e in es {
+                visit_expr(e, f_expr, f_stmt);
+            }
+        },
+    }
+}

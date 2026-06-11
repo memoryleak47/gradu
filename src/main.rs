@@ -7,6 +7,9 @@ pub use parse::*;
 mod ty;
 pub use ty::*;
 
+mod visit;
+pub use visit::*;
+
 mod vars;
 pub use vars::*;
 
@@ -21,7 +24,7 @@ use std::collections::{HashMap, HashSet};
 fn main() {
     use std::path::*;
 
-    let filename = std::env::args().nth(1).unwrap_or(String::from("factorial"));
+    let filename = std::env::args().nth(1).unwrap_or(String::from("uf"));
     let filename = filename.replace("examples/", "").replace(".gradu", "");
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let path = root.join("examples").join(filename + ".gradu");

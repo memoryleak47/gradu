@@ -229,15 +229,28 @@ fn layout(x: TypeLattice, ctxt: &TyLatticeCtxt, ast: &AST) -> LayoutType {
     } else { LayoutType::Value }
 }
 
+// TODO: this should be cached obviously.
 pub fn is_global_var(fid: FnId, varname: Symbol, ast: &AST) -> bool {
-    if fid == ast.main_fn { return true }
+    if fid == ast.main_fn { return true } // TODO main-fn variables can remain "local" if no one else reads them. would be faster.
     let f = &ast.fns[fid];
+    if f.args.contains(&varname) { return false }
     if f.body.contains(&Stmt::Global(varname)) { return true }
+    if !is_assigned(fid, varname, ast) { return true }
 
-    // In python, if you only read a variable without ever writing to it, it's implicitly global.
-    // I'll ignore that for now though.
 
     false
+}
+
+fn is_assigned(fid: FnId, varname: Symbol, ast: &AST) -> bool {
+    let body = &ast.fns[fid].body;
+    let mut assigned = false;
+    visit_body(body, &mut |_|{}, &mut |stmt| {
+        if let Stmt::Assign(v, _) = stmt && *v == varname {
+            assigned = true;
+        }
+    });
+
+    assigned
 }
 
 pub fn get_var_loc(fid: FnId, varname: Symbol, ast: &AST) -> Location {

@@ -1,81 +1,23 @@
 use crate::*;
 
 pub fn get_vars(f: &FnDef) -> HashSet<Symbol> {
-    let mut set = HashSet::new();
-    set.extend(&f.args);
+    let mut set1 = HashSet::new();
+    let mut set2 = HashSet::new();
+    set1.extend(&f.args);
 
-    get_vars_body(&f.body, &mut set);
+    let f_expr = &mut |expr: &Expr| {
+        if let Expr::Var(v) = expr {
+            set1.insert(*v);
+        }
+    };
+    let f_stmt = &mut |stmt: &Stmt| {
+        if let Stmt::Assign(v, _) = stmt {
+            set2.insert(*v);
+        }
+    };
 
-    set
+    visit_body(&f.body, f_expr, f_stmt);
+
+    set1.union(&set2).copied().collect()
 }
 
-fn get_vars_body(body: &Body, set: &mut HashSet<Symbol>) {
-    for s in body {
-        get_vars_stmt(s, set);
-    }
-}
-
-fn get_vars_stmt(stmt: &Stmt, set: &mut HashSet<Symbol>) {
-    use Stmt::*;
-    match stmt {
-        Global(_) => {},
-        ListStore(l, i, v) => {
-            get_vars_expr(l, set);
-            get_vars_expr(i, set);
-            get_vars_expr(v, set);
-        },
-        Push(l, v) => {
-            get_vars_expr(l, set);
-            get_vars_expr(v, set);
-        },
-
-        Return(e) => get_vars_expr(e, set),
-        Assign(v, e) => {
-            set.insert(*v);
-            get_vars_expr(e, set);
-        },
-        If(c, then_, else_) => {
-            get_vars_expr(c, set);
-            get_vars_body(then_, set);
-            get_vars_body(else_, set);
-        },
-        While(e, b) => {
-            get_vars_expr(e, set);
-            get_vars_body(b, set);
-        },
-        Print(e) => {
-            get_vars_expr(e, set);
-        },
-    }
-}
-
-fn get_vars_expr(expr: &Expr, set: &mut HashSet<Symbol>) {
-    use Expr::*;
-    match expr {
-        FnId(_) => {},
-        NewList => {},
-        Length(l) => {
-            get_vars_expr(l, set);
-        },
-        IndexList(l, i) => {
-            get_vars_expr(l, set);
-            get_vars_expr(i, set);
-        },
-        BinOp(_, e1, e2) => {
-            get_vars_expr(e1, set);
-            get_vars_expr(e2, set);
-        },
-        IntLit(_) => {},
-        StringLit(_) => {},
-        BoolLit(_) => {},
-        Var(v) => {
-            set.insert(*v);
-        },
-        Input => {},
-        FnCall(_, es) => {
-            for e in es {
-                get_vars_expr(e, set);
-            }
-        },
-    }
-}
