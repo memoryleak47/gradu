@@ -14,6 +14,7 @@
 #define str_to_value(x) ((Value) { .tag = TAG_STR, .payload.s = x })
 #define nil_to_value() ((Value) { .tag = TAG_NIL })
 #define list_to_value(x) ((Value) { .tag = TAG_LIST, .payload.l = x })
+#define tagged_fn_to_value(x, t) ((Value) { .tag = t, .payload.f = x })
 
 typedef struct Value Value;
 typedef struct list list;
@@ -100,6 +101,11 @@ bool value_to_bool(Value v) {
 list* value_to_list(Value v) {
     check(v.tag == TAG_LIST, "value_to_list failed!");
     return v.payload.l;
+}
+
+void* value_to_fn_with_tag(Value v, int tag) {
+    check(v.tag == tag, "value_to_fn_check_tag failed!");
+    return v.payload.f;
 }
 
 bool is_equal(Value v1, Value v2) {
