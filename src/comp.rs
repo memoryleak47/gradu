@@ -21,8 +21,8 @@ pub fn comp(ast: &AST) {
 }
 
 fn compile_ast(ast: &AST) -> String {
-    let tylctxt = analyze(ast);
-    let tyctxt = layout_all(&tylctxt, ast);
+    let actxt = analyze(ast);
+    let (tylctxt, tyctxt) = layout_all(&actxt, ast);
 
     let mut compiled = String::from(include_str!("preamble.h"));
 

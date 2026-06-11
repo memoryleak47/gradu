@@ -32,7 +32,7 @@ fn inherit_fn_analysis(from: FnId, to: FnId, ast: &AST, vactxt: &mut ACtxt) {
     }
 }
 
-pub fn layout_all(actxt: &ACtxt, ast: &AST) -> LCtxt {
+pub fn layout_all(actxt: &ACtxt, ast: &AST) -> (ACtxt, LCtxt) {
     // 1. UF
     let uf = call_layout_uf(actxt, ast);
 
@@ -51,9 +51,10 @@ pub fn layout_all(actxt: &ACtxt, ast: &AST) -> LCtxt {
     }
 
 
-    actxt.iter()
+    let lctxt = vactxt.iter()
      .map(|(v, ty)| (*v, layout(ty.clone(), &vactxt, ast)))
-     .collect()
+     .collect();
+    (vactxt.clone(), lctxt)
 }
 
 pub fn layout(x: TypeLattice, actxt: &ACtxt, ast: &AST) -> LayoutType {
