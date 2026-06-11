@@ -162,6 +162,7 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
             LayoutType::Value => unreachable!(),
         }
     } else if let LayoutType::Fn(..) = &old && let LayoutType::Fn(..) = &new {
+        // TODO: those casts are easily UB.
         let new_str = stringify_layout(&new);
         format!("(({new_str}) ({e}))")
     } else {
