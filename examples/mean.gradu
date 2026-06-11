@@ -1,3 +1,8 @@
+# mean.gradu
+
+# This is hard as "a" and "b" have different type layouts if done improperly.
+# This can easily become UB.
+
 a = fn(x) { return x+1; };
 b = fn(x) { return "ok"; };
 
@@ -9,4 +14,5 @@ if (true) {
     f = b;
 }
 
+# OUT: 42
 print(f(41));

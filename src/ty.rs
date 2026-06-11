@@ -2,12 +2,12 @@ use crate::*;
 
 #[derive(Clone)]
 pub struct TypeLattice {
-    might_be_bool: bool,
-    might_be_nil: bool,
-    might_be_str: bool,
-    might_be_int: bool,
-    might_be_list: bool,
-    fn_options: HashSet<FnId>,
+    pub might_be_bool: bool,
+    pub might_be_nil: bool,
+    pub might_be_str: bool,
+    pub might_be_int: bool,
+    pub might_be_list: bool,
+    pub fn_options: HashSet<FnId>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -22,7 +22,7 @@ pub enum LayoutType {
 }
 
 pub type TyCtxt = HashMap<Location, LayoutType>;
-type TyLatticeCtxt = HashMap<Location, TypeLattice>;
+pub type TyLatticeCtxt = HashMap<Location, TypeLattice>;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum Location {
@@ -35,7 +35,7 @@ pub enum Location {
 // points to a `Expr::NewList`.
 pub type ListLoc = *const Expr;
 
-pub fn ty_infer(ast: &AST) -> TyCtxt {
+pub fn ty_infer(ast: &AST) -> (TyLatticeCtxt, TyCtxt) {
     let mut m = HashMap::new();
 
     // initilize `m`.
@@ -58,9 +58,10 @@ pub fn ty_infer(ast: &AST) -> TyCtxt {
         }
     }
 
-    m.iter()
+    let m2 = m.iter()
      .map(|(v, ty)| (*v, layout(ty.clone(), &m, ast)))
-     .collect()
+     .collect();
+    (m, m2)
 }
 
 fn get(x: Location, ctxt: &TyLatticeCtxt) -> TypeLattice {
@@ -118,7 +119,7 @@ fn add(v: Location, ty: &TypeLattice, ctxt: &mut TyLatticeCtxt) {
     ctxt.insert(v, ty);
 }
 
-fn ty_infer_expr(expr: &Expr, fid: FnId, ast: &AST, ctxt: &mut TyLatticeCtxt) -> TypeLattice {
+pub fn ty_infer_expr(expr: &Expr, fid: FnId, ast: &AST, ctxt: &mut TyLatticeCtxt) -> TypeLattice {
     match expr {
         Expr::FnId(f) => {
             TypeLattice { fn_options: std::iter::once(*f).collect(), ..TypeLattice::bot() }
@@ -238,7 +239,7 @@ impl TypeLattice {
     }
 }
 
-fn layout(x: TypeLattice, ctxt: &TyLatticeCtxt, ast: &AST) -> LayoutType {
+pub fn layout(x: TypeLattice, ctxt: &TyLatticeCtxt, ast: &AST) -> LayoutType {
     if (x.might_be_int) as u8 + (x.might_be_bool as u8) + (x.might_be_nil as u8) + (x.might_be_str as u8) + (x.might_be_list as u8) + ((x.fn_options.len() > 0) as u8) != 1 {
         LayoutType::Value
     } else if x.might_be_bool { LayoutType::Bool }
@@ -248,13 +249,7 @@ fn layout(x: TypeLattice, ctxt: &TyLatticeCtxt, ast: &AST) -> LayoutType {
     else if x.might_be_list { LayoutType::List }
     else if x.might_be_list { LayoutType::List }
     else if let Some(&fid) = x.fn_options.iter().next() { // TODO we have to guarantee that all those fn have the same argtys & retty.
-        let mut argtys = Vec::new();
-        for &a in &ast.fns[fid].args {
-            argtys.push(layout(get(Location::Var(fid, a), ctxt), ctxt, ast));
-        }
-        let retty = layout(get(Location::RetVal(fid), ctxt), ctxt, ast);
-
-        LayoutType::Fn(argtys, Box::new(retty.clone()))
+        fn_type_of(fid, ast, ctxt)
     } else { LayoutType::Value }
 }
 
@@ -288,4 +283,14 @@ pub fn get_var_loc(fid: FnId, varname: Symbol, ast: &AST) -> Location {
     } else {
         Location::Var(fid, varname)
     }
+}
+
+pub fn fn_type_of(fid: FnId, ast: &AST, ctxt: &TyLatticeCtxt) -> LayoutType {
+    let mut argtys = Vec::new();
+    for &a in &ast.fns[fid].args {
+        argtys.push(layout(get(Location::Var(fid, a), ctxt), ctxt, ast));
+    }
+    let retty = layout(get(Location::RetVal(fid), ctxt), ctxt, ast);
+
+    LayoutType::Fn(argtys, Box::new(retty.clone()))
 }

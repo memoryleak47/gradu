@@ -1,0 +1,16 @@
+# mean2.gradu
+
+a = fn(x) { return x+1; };
+b = fn(x) { return "ok"; };
+c = fn(x) { return "wow"; };
+d = 42;
+
+_ = c("wow");
+
+if (true) { f = d; } else { }
+if (true) { f = c; } else { }
+if (true) { f = b; } else { }
+if (true) { f = a; } else { }
+
+# OUT: 42
+print(f(41));
