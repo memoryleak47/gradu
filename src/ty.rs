@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct TypeLattice {
     pub might_be_bool: bool,
     pub might_be_nil: bool,
@@ -38,10 +38,11 @@ pub type ListLoc = *const Expr;
 pub fn ty_infer(ast: &AST) -> (TyLatticeCtxt, TyCtxt) {
     let mut m = HashMap::new();
 
-    // After 5 rounds, we have to have converged!
-    for _ in 0..5 {
+    'outer: loop {
         for (fid, fdef) in ast.fns.iter().enumerate() {
+            let bkp = m.clone();
             ty_infer_body(&fdef.body, fid, ast, &mut m);
+            if bkp == m { break 'outer; }
         }
     }
 

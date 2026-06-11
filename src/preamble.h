@@ -87,6 +87,11 @@ int value_to_int(Value v) {
     return v.payload.i;
 }
 
+char* value_to_str(Value v) {
+    check(v.tag == TAG_STR, "value_to_str failed!");
+    return v.payload.s;
+}
+
 bool value_to_bool(Value v) {
     check(v.tag == TAG_BOOL, "value_to_bool failed!");
     return v.payload.b;
