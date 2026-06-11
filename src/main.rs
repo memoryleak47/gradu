@@ -10,9 +10,6 @@ pub use ty::*;
 mod visit;
 pub use visit::*;
 
-mod vars;
-pub use vars::*;
-
 mod comp;
 pub use comp::*;
 

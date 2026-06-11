@@ -38,19 +38,6 @@ pub type ListLoc = *const Expr;
 pub fn ty_infer(ast: &AST) -> (TyLatticeCtxt, TyCtxt) {
     let mut m = HashMap::new();
 
-    // initilize `m`.
-    for (fid, fdef) in ast.fns.iter().enumerate() {
-        let l = Location::RetVal(fid);
-        m.insert(l, TypeLattice::bot());
-
-        for v in get_vars(fdef) {
-            let l = get_var_loc(fid, v, ast);
-            m.insert(l, TypeLattice::bot());
-        }
-    }
-
-    m.insert(Location::ListItem, TypeLattice::bot());
-
     // After 5 rounds, we have to have converged!
     for _ in 0..5 {
         for (fid, fdef) in ast.fns.iter().enumerate() {

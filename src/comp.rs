@@ -78,7 +78,7 @@ fn compile_fn(fid: FnId, ast: &AST, tyctxt: &TyCtxt, tylctxt: &TyLatticeCtxt) ->
     let f = &ast.fns[fid];
 
     // retval
-    let retval = tyctxt.get(&Location::RetVal(fid)).unwrap().clone();
+    let retval = get_ty(Location::RetVal(fid), tyctxt);
     let retval = stringify_layout(&retval);
 
     // args
