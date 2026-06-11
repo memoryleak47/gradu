@@ -37,6 +37,12 @@ void check(bool b, char* s) {
     }
 }
 
+Value fail(char* s) {
+    printf("%s\n", s);
+    exit(1);
+    return nil_to_value();
+}
+
 void print_value(Value v) {
     if (v.tag == TAG_INT) {
         printf("%i\n", v.payload.i);
