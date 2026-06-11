@@ -1,10 +1,18 @@
 use std::str::FromStr;
 use crate::*;
 
-grammar;
+grammar(g_ast: &mut AST);
 
-pub AST: AST = {
-    <stmts:Stmt*> => stmts,
+pub AST: () = {
+    <b:Body> => {
+        let i = g_ast.fns.len();
+        g_ast.fns.push(FnDef(Vec::new(), b));
+        g_ast.main_fn = i;
+    },
+};
+
+pub Body: Body = {
+    <b:Stmt*> => b,
 };
 
 pub Args: Vec<Symbol> = Comma<Ident>;
@@ -19,7 +27,11 @@ pub Expr: Expr = {
 // SafeExpr is an Expr that can only be "parsed in one way" in any context.
 // A non-safe Expr is something like `a + b`, as `c*a + b` will be parsed wrongly.
 pub SafeExpr: Expr = {
-    "fn" "(" <args:Args> ")" "{" <body:AST> "}" => Expr::FnDef(args, body),
+    "fn" "(" <args:Args> ")" "{" <body:Body> "}" => {
+        let i = g_ast.fns.len();
+        g_ast.fns.push(FnDef(args, body));
+        Expr::FnId(i)
+    },
     "[" "]" => Expr::NewList,
     <n:Num> => Expr::IntLit(n),
     <s:Str> => Expr::StringLit(s),
@@ -48,8 +60,8 @@ pub Stmt: Stmt = {
     <l:SafeExpr> "[" <i:SafeExpr> "]" "=" <v:Expr> ";" => Stmt::ListStore(l, i, v),
     <v:Ident> "=" <e:Expr> ";" => Stmt::Assign(v, e),
     "print" "(" <e:Expr> ")" ";" => Stmt::Print(e),
-    "if" <c: Expr> "{" <then_:AST> "}" "else" "{" <else_:AST> "}" => Stmt::If(c, then_, else_),
-    "while" <c:Expr> "{" <body:AST> "}" => Stmt::While(c, body),
+    "if" <c: Expr> "{" <then_:Body> "}" "else" "{" <else_:Body> "}" => Stmt::If(c, then_, else_),
+    "while" <c:Expr> "{" <body:Body> "}" => Stmt::While(c, body),
     "return" <e:Expr> ";" => Stmt::Return(e),
 };
 
