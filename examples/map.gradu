@@ -20,6 +20,12 @@ sum = fn(l) {
     return s;
 };
 
+old_sum = sum;
+sum = fn(l) {
+    print("computing sum!");
+    return old_sum(l);
+};
+
 l = [];
 
 l.push(1);
@@ -27,10 +33,12 @@ l.push(2);
 l.push(3);
 
 
+# OUT: computing sum!
 # OUT: 9
 shift = fn(x) { return x+1; };
 print(sum(map(l, shift)));
 
+# OUT: computing sum!
 # OUT: 12
 times_two = fn(x) { return x*2; };
 print(sum(map(l, times_two)));
