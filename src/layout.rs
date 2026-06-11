@@ -30,7 +30,7 @@ pub struct FnCallLayout {
 
 pub fn layout(actxt: &ACtxt, ast: &AST) -> LCtxt {
     // 1. UF
-    let (fn_map, calls) = call_layout_uf(actxt, ast);
+    let (fn_map, actxt, calls) = call_layout_uf(actxt, ast);
 
     // 2. accumulate FnCallLayouts
     let mut fn_tag_a: HashMap<FnTag, FnCallLattice> = HashMap::new();
@@ -40,7 +40,7 @@ pub fn layout(actxt: &ACtxt, ast: &AST) -> LCtxt {
             let arity = ast.fns[f].args.len();
             fn_tag_a.insert(tag, FnCallLattice::bot(arity));
         }
-        let flat = FnCallLattice::mk(f, actxt, ast);
+        let flat = FnCallLattice::mk(f, &actxt, ast);
         fn_tag_a.insert(tag, FnCallLattice::merge(&fn_tag_a[&tag], &flat));
     }
 
@@ -100,7 +100,7 @@ fn uf_union(x: FnId, y: FnId, uf: &mut HashMap<FnId, FnId>) {
     uf.insert(x, y);
 }
 
-fn call_layout_uf(actxt: &ACtxt, ast: &AST) -> (HashMap<FnId, FnTag>, HashMap<*const Expr, FnTag>) {
+fn call_layout_uf(actxt: &ACtxt, ast: &AST) -> (HashMap<FnId, FnTag>, ACtxt, HashMap<*const Expr, FnTag>) {
     let mut actxt = actxt.clone();
 
     let mut uf = HashMap::new();
@@ -125,6 +125,18 @@ fn call_layout_uf(actxt: &ACtxt, ast: &AST) -> (HashMap<FnId, FnTag>, HashMap<*c
         }, &mut |_|{});
     }
 
+    // 2. update actxt
+    for &follower in uf.keys() {
+        let leader = uf_find(follower, &uf);
+        inherit_fn_analysis(follower, leader, ast, &mut actxt);
+    }
+
+    // leader -> follower to share back.
+    for &follower in uf.keys() {
+        let leader = uf_find(follower, &uf);
+        inherit_fn_analysis(leader, follower, ast, &mut actxt);
+    }
+
     let mut fn_map = HashMap::new();
     for follower in 0..ast.fns.len() {
         let leader = uf_find(follower, &uf);
@@ -140,7 +152,7 @@ fn call_layout_uf(actxt: &ACtxt, ast: &AST) -> (HashMap<FnId, FnTag>, HashMap<*c
         calls2.insert(e, fn_map[&v]);
     }
 
-    (fn_map, calls2)
+    (fn_map, actxt, calls2)
 }
 
 
@@ -181,5 +193,19 @@ impl FnCallLattice {
             argtys,
             retty,
         }
+    }
+}
+
+
+fn inherit_fn_analysis(from: FnId, to: FnId, ast: &AST, actxt: &mut ACtxt) {
+    let from_fdef = &ast.fns[from];
+    let to_fdef = &ast.fns[to];
+
+    // retval
+    add(Location::RetVal(to), &get(Location::RetVal(from), actxt), actxt);
+
+    // args
+    for (&from_a, &to_a) in from_fdef.args.iter().zip(to_fdef.args.iter()) {
+        add(Location::Var(to, to_a), &get(Location::Var(from, from_a), actxt), actxt);
     }
 }
