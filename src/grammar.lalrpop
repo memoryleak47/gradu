@@ -4,9 +4,9 @@ use crate::*;
 grammar(g_ast: &mut AST);
 
 pub AST: () = {
-    <b:Body> => {
+    <body:Body> => {
         let i = g_ast.fns.len();
-        g_ast.fns.push(FnDef(Vec::new(), b));
+        g_ast.fns.push(FnDef { args: Vec::new(), body });
         g_ast.main_fn = i;
     },
 };
@@ -29,7 +29,7 @@ pub Expr: Expr = {
 pub SafeExpr: Expr = {
     "fn" "(" <args:Args> ")" "{" <body:Body> "}" => {
         let i = g_ast.fns.len();
-        g_ast.fns.push(FnDef(args, body));
+        g_ast.fns.push(FnDef { args, body });
         Expr::FnId(i)
     },
     "[" "]" => Expr::NewList,

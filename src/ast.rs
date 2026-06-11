@@ -9,7 +9,10 @@ pub struct AST {
 }
 
 #[derive(Debug)]
-pub struct FnDef(pub Vec<Symbol>, pub Body);
+pub struct FnDef {
+    pub args: Vec<Symbol>,
+    pub body: Body,
+}
 
 pub type Body = Vec<Stmt>;
 

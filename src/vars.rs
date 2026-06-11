@@ -52,6 +52,7 @@ fn get_vars_stmt(stmt: &Stmt, set: &mut HashSet<Symbol>) {
 fn get_vars_expr(expr: &Expr, set: &mut HashSet<Symbol>) {
     use Expr::*;
     match expr {
+        FnId(_) => {},
         NewList => {},
         Length(l) => {
             get_vars_expr(l, set);
