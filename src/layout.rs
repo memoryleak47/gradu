@@ -62,7 +62,6 @@ pub fn layout(x: TypeLattice, actxt: &ACtxt, ast: &AST) -> LayoutType {
     else if x.might_be_str { LayoutType::Str }
     else if x.might_be_nil { LayoutType::Nil }
     else if x.might_be_list { LayoutType::List }
-    else if x.might_be_list { LayoutType::List }
     else if let Some(&fid) = x.fn_options.iter().next() { // TODO we have to guarantee that all those fn have the same argtys & retty.
         LayoutType::Fn(fn_type_of(fid, ast, actxt))
     } else { LayoutType::Value }
