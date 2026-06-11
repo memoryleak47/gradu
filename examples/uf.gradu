@@ -38,7 +38,7 @@ t = uf_union(uf, c, d);
 t = uf_union(uf, b, f);
 
 # OUT: true
-print(uf_find(uf, a) == uf_find(uf, g));
+print((uf_find(uf, a)) == (uf_find(uf, g)));
 
 # OUT: false
-print(uf_find(uf, a) == uf_find(uf, e));
+print((uf_find(uf, a)) == (uf_find(uf, e)));
