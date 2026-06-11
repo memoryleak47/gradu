@@ -10,8 +10,8 @@ pub use ty::*;
 mod vars;
 pub use vars::*;
 
-// mod comp;
-// pub use comp::*;
+mod comp;
+pub use comp::*;
 
 extern crate symbol_table;
 pub type Symbol = symbol_table::GlobalSymbol;
@@ -28,7 +28,5 @@ fn main() {
     let s = std::fs::read_to_string(path).unwrap();
 
     let ast = parse(&s);
-    let tyctxt = ty_infer(&ast);
-    dbg!(&tyctxt);
-    // comp::comp(&ast);
+    comp::comp(&ast);
 }

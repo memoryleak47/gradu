@@ -8,12 +8,14 @@
 #define TAG_STR 2
 #define TAG_NIL 3
 #define TAG_LIST 4
+#define TAG_FN 5
 
 #define int_to_value(x) ((Value) { .tag = TAG_INT, .payload.i = x })
 #define bool_to_value(x) ((Value) { .tag = TAG_BOOL, .payload.b = x })
 #define str_to_value(x) ((Value) { .tag = TAG_STR, .payload.s = x })
 #define nil_to_value() ((Value) { .tag = TAG_NIL })
 #define list_to_value(x) ((Value) { .tag = TAG_LIST, .payload.l = x })
+#define fn_to_value(x) ((Value) { .tag = TAG_FN, .payload.f = x })
 
 typedef struct Value Value;
 typedef struct list list;
@@ -25,6 +27,7 @@ struct Value {
         bool b;
         char* s;
         list* l;
+        void* f;
     } payload;
 };
 
@@ -94,6 +97,11 @@ list* value_to_list(Value v) {
     return v.payload.l;
 }
 
+void* value_to_fn(Value v) {
+    check(v.tag == TAG_FN, "value_to_fn failed!");
+    return v.payload.f;
+}
+
 bool is_equal(Value v1, Value v2) {
     if (v1.tag != v2.tag) { return false; }
     switch (v1.tag) {
@@ -102,6 +110,7 @@ bool is_equal(Value v1, Value v2) {
         case TAG_STR: return strcmp(v1.payload.s, v2.payload.s) == 0;
         case TAG_NIL: return true;
         case TAG_LIST: return v1.payload.l == v2.payload.l; // ptr compare
+        case TAG_FN: return v1.payload.f == v2.payload.f;
         default: check(false, "is_equal on unknown tag!");
     }
 }

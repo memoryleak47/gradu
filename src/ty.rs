@@ -17,7 +17,7 @@ pub enum LayoutType {
     Str,
     Int,
     List,
-    Fn,
+    Fn, // TODO: should be Fn(Vec<LayoutTy>, LayoutTy),
     Value, // "any"
 }
 
