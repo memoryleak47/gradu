@@ -162,7 +162,7 @@ pub fn ty_infer_expr(expr: &Expr, fid: FnId, ast: &AST, actxt: &mut ACtxt) -> Ty
 }
 
 impl TypeLattice {
-    fn bot() -> Self {
+    pub fn bot() -> Self {
         TypeLattice {
             might_be_bool: false,
             might_be_nil: false,
@@ -173,7 +173,7 @@ impl TypeLattice {
         }
     }
 
-    fn merge(x: &TypeLattice, y: &TypeLattice) -> TypeLattice {
+    pub fn merge(x: &TypeLattice, y: &TypeLattice) -> TypeLattice {
         TypeLattice {
             might_be_bool: x.might_be_bool || y.might_be_bool,
             might_be_nil: x.might_be_nil|| y.might_be_nil,
