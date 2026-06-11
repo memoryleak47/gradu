@@ -140,8 +140,6 @@ pub fn ty_infer_expr(expr: &Expr, fid: FnId, ast: &AST, ctxt: &mut TyLatticeCtxt
         Expr::FnCall(f, args) => {
             let f = ty_infer_expr(f, fid, ast, ctxt);
 
-            let mut out = TypeLattice::bot();
-
             let mut callee_options = Vec::new();
             for callee_fid in f.fn_options.iter().copied() {
                 let callee_fdef = &ast.fns[callee_fid];
@@ -173,14 +171,12 @@ pub fn ty_infer_expr(expr: &Expr, fid: FnId, ast: &AST, ctxt: &mut TyLatticeCtxt
 
             // accumulate compute ret type
             for &callee_fid in &callee_options {
-                let callee_fdef = &ast.fns[callee_fid];
                 let l = Location::RetVal(callee_fid);
                 callee_ret_type = TypeLattice::merge(&callee_ret_type, &get(l, ctxt));
             }
 
             // write back ret type
             for &callee_fid in &callee_options {
-                let callee_fdef = &ast.fns[callee_fid];
                 let l = Location::RetVal(callee_fid);
                 add(l, &callee_ret_type, ctxt);
             }
