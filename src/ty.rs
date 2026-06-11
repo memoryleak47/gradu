@@ -218,7 +218,7 @@ fn layout(x: TypeLattice, ctxt: &TyLatticeCtxt, ast: &AST) -> LayoutType {
     else if x.might_be_nil { LayoutType::Nil }
     else if x.might_be_list { LayoutType::List }
     else if x.might_be_list { LayoutType::List }
-    else if let Some(&fid) = x.fn_options.iter().next() {
+    else if let Some(&fid) = x.fn_options.iter().next() { // TODO we have to guarantee that all those fn have the same argtys & retty.
         let mut argtys = Vec::new();
         for &a in &ast.fns[fid].args {
             argtys.push(layout(get(Location::Var(fid, a), ctxt), ctxt, ast));
