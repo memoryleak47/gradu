@@ -1,2 +1,6 @@
+# mean4.gradu
+
 f = fn() {};
+
+# OUT: runtime error: wrong arity fn call.
 print(f(42));
