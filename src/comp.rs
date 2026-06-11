@@ -166,7 +166,10 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, lctxt: &LCtxt) -> (String, LayoutTy
             (format!("index_list({l}, {i})"), ty)
         },
         Expr::FnCall(f, args) => {
-            let tag = lctxt.calls[&(e as *const Expr)];
+            let Some(&tag) = lctxt.calls.get(&(e as *const Expr)) else {
+                // This is only None, if no function can ever be called in this expr.
+                panic!("will crash at runtime");
+            };
             let layout = &lctxt.fn_tag_layout[&tag];
             let FnCallLayout { argtys, retty } = layout;
 
