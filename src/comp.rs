@@ -164,9 +164,10 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
         let new_str = stringify_layout(&new);
         format!("(({new_str}) ({e}))")
     } else {
-        dbg!(&old);
-        dbg!(&new);
-        panic!("This cast *has* to fail!")
+        // This cast will always fail at runtime.
+        let e = type_cast_to(e, old, LayoutType::Value);
+        let e = type_cast_to(e, LayoutType::Value, new);
+        e
     }
 }
 
@@ -201,8 +202,12 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, tyctxt: &TyCtxt, tylctxt: &TyLattic
             (format!("index_list({l}, {i})"), ty)
         },
         Expr::FnCall(f, args) => {
-            let example_callee = *ty_infer_expr(f, fid, ast, &mut tylctxt.clone()).fn_options.iter().next().unwrap();
-            let ty = fn_type_of(example_callee, ast, tylctxt);
+            let ty = ty_infer_expr(f, fid, ast, &mut tylctxt.clone())
+                    .fn_options
+                    .iter()
+                    .next()
+                    .map(|&example_callee| fn_type_of(example_callee, ast, tylctxt))
+                    .unwrap_or(LayoutType::Fn(vec![LayoutType::Value; args.len()], Box::new(LayoutType::Value)));
             let LayoutType::Fn(argtys, retty) = &ty  else { panic!() };
 
             let f = comp_typed_expr(f, ty.clone(), fid, ast, tyctxt, tylctxt);

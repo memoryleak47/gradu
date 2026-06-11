@@ -1,0 +1,10 @@
+# mean3.gradu
+
+x = 2;
+if (false) {
+    _ = x();
+    _ = x(x, x);
+} else {
+    # OUT: nice
+    print("nice");
+}
