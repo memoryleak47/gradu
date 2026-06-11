@@ -39,12 +39,14 @@ pub fn layout_all(actxt: &ACtxt, ast: &AST) -> LCtxt {
     // 2. varied actxt
     // follower -> leader to accumulate at the leader.
     let mut vactxt = actxt.clone();
-    for (&follower, &leader) in &uf {
+    for &follower in uf.keys() {
+        let leader = uf_find(follower, &uf);
         inherit_fn_analysis(follower, leader, ast, &mut vactxt);
     }
 
     // leader -> follower to share back.
-    for (&follower, &leader) in &uf {
+    for &follower in uf.keys() {
+        let leader = uf_find(follower, &uf);
         inherit_fn_analysis(leader, follower, ast, &mut vactxt);
     }
 
@@ -62,8 +64,15 @@ pub fn layout(x: TypeLattice, actxt: &ACtxt, ast: &AST) -> LayoutType {
     else if x.might_be_str { LayoutType::Str }
     else if x.might_be_nil { LayoutType::Nil }
     else if x.might_be_list { LayoutType::List }
-    else if let Some(&fid) = x.fn_options.iter().next() { // TODO we have to guarantee that all those fn have the same argtys & retty.
-        LayoutType::Fn(fn_type_of(fid, ast, actxt))
+    else if let Some(&fid) = x.fn_options.iter().next() {
+        // We only return a particular layout, if all fns agree on that layout.
+        let opt = fn_type_of(fid, ast, actxt);
+        for &other in x.fn_options.iter() {
+            if opt != fn_type_of(other, ast, actxt) {
+                return LayoutType::Value
+            }
+        }
+        LayoutType::Fn(opt)
     } else { LayoutType::Value }
 }
 

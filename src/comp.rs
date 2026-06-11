@@ -206,7 +206,7 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, tyctxt: &LCtxt, tylctxt: &ACtxt) ->
             let ty = ty_infer_expr(f, fid, ast, &mut tylctxt.clone())
                     .fn_options
                     .iter()
-                    .next()
+                    .find(|&example_callee| ast.fns[*example_callee].args.len() == args.len())
                     .map(|&example_callee| fn_type_of(example_callee, ast, tylctxt))
                     .unwrap_or(FnCallLayout { argtys: vec![LayoutType::Value; args.len()], retty: Box::new(LayoutType::Value) });
             let FnCallLayout { argtys, retty } = &ty;
