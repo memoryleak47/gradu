@@ -26,7 +26,7 @@ fn visit_stmt(stmt: &Stmt, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnM
         Return(e) => {
             visit_expr(e, f_expr, f_stmt);
         },
-        Assign(v, e) => {
+        Assign(_, e) => {
             visit_expr(e, f_expr, f_stmt);
         },
         If(c, then_, else_) => {
@@ -66,7 +66,7 @@ fn visit_expr(expr: &Expr, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnM
         IntLit(_) => {},
         StringLit(_) => {},
         BoolLit(_) => {},
-        Var(v) => {},
+        Var(_) => {},
         Input => {},
         FnCall(f, es) => {
             visit_expr(f, f_expr, f_stmt);

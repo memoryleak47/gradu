@@ -86,8 +86,7 @@ fn compile_fn(fid: FnId, ast: &AST, tyctxt: &TyCtxt) -> String {
     for (i, arg) in f.args.iter().enumerate() {
         let l = Location::Var(fid, *arg);
         let argty = get_ty(l, tyctxt);
-        let argty = stringify_layout(&argty);
-        args_s.push_str(&format!("{argty} {arg}"));
+        args_s.push_str(&make_decl(&argty, *arg));
         if i != f.args.len() - 1 {
             args_s.push_str(", ");
         }
@@ -97,8 +96,7 @@ fn compile_fn(fid: FnId, ast: &AST, tyctxt: &TyCtxt) -> String {
     let mut varprefix = String::new();
     for (loc, varty) in tyctxt.iter() {
         if let Location::Var(ff, x) = loc && *ff == fid && !f.args.contains(x) && !is_global_var(fid, *x, ast) {
-            let varty = stringify_layout(varty);
-            varprefix.push_str(&format!("    {varty} {x};\n"));
+            varprefix.push_str(&format!("    {};\n", make_decl(varty, *x)));
         }
     }
 

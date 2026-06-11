@@ -32,5 +32,5 @@ shift = fn(x) { return x+1; };
 print(sum(map(l, shift)));
 
 # OUT: 12
-double = fn(x) { return x*2; };
-print(sum(map(l, double)));
+times_two = fn(x) { return x*2; };
+print(sum(map(l, times_two)));
