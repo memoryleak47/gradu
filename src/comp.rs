@@ -21,7 +21,8 @@ pub fn comp(ast: &AST) {
 }
 
 fn compile_ast(ast: &AST) -> String {
-    let (tylctxt, tyctxt) = ty_infer(ast);
+    let tylctxt = analyze(ast);
+    let tyctxt = layout_all(&tylctxt, ast);
 
     let mut compiled = String::from(include_str!("preamble.h"));
 
@@ -58,7 +59,7 @@ fn stringify_layout(ty: &LayoutType) -> String {
         LayoutType::Bool => "bool",
         LayoutType::Str => "char*",
         LayoutType::List => "list*",
-        LayoutType::Fn(args, ret) => {
+        LayoutType::Fn(FnCallLayout { argtys: args, retty: ret }) => {
             let ret = stringify_layout(ret);
             let mut s = format!("{ret} (*)(");
             for (i, a) in args.iter().enumerate() {
@@ -74,7 +75,7 @@ fn stringify_layout(ty: &LayoutType) -> String {
     })
 }
 
-fn compile_fn(fid: FnId, ast: &AST, tyctxt: &TyCtxt, tylctxt: &TyLatticeCtxt) -> String {
+fn compile_fn(fid: FnId, ast: &AST, tyctxt: &LCtxt, tylctxt: &ACtxt) -> String {
     let f = &ast.fns[fid];
 
     // retval
@@ -107,7 +108,7 @@ fn compile_fn(fid: FnId, ast: &AST, tyctxt: &TyCtxt, tylctxt: &TyLatticeCtxt) ->
 }
 
 fn make_decl(ty: &LayoutType, v: Symbol) -> String {
-    if let LayoutType::Fn(args, ret) = ty {
+    if let LayoutType::Fn(FnCallLayout { argtys: args, retty: ret }) = ty {
         let ret = stringify_layout(ret);
         let mut s = format!("{ret} (*{v})(");
         for (i, a) in args.iter().enumerate() {
@@ -171,12 +172,12 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
     }
 }
 
-fn comp_typed_expr(e: &Expr, ty: LayoutType, fid: FnId, ast: &AST, tyctxt: &TyCtxt, tylctxt: &TyLatticeCtxt) -> String {
+fn comp_typed_expr(e: &Expr, ty: LayoutType, fid: FnId, ast: &AST, tyctxt: &LCtxt, tylctxt: &ACtxt) -> String {
     let (e, t) = comp_expr(e, fid, ast, tyctxt, tylctxt);
     type_cast_to(e, t, ty)
 }
 
-fn comp_expr(e: &Expr, fid: FnId, ast: &AST, tyctxt: &TyCtxt, tylctxt: &TyLatticeCtxt) -> (String, LayoutType) {
+fn comp_expr(e: &Expr, fid: FnId, ast: &AST, tyctxt: &LCtxt, tylctxt: &ACtxt) -> (String, LayoutType) {
     match e {
         Expr::FnId(ffid) => {
             let retty = get_ty(Location::RetVal(*ffid), tyctxt);
@@ -184,7 +185,7 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, tyctxt: &TyCtxt, tylctxt: &TyLattic
             for &a in &ast.fns[*ffid].args {
                 args.push(get_ty(Location::Var(*ffid, a), tyctxt));
             }
-            (format!("fn_{ffid}"), LayoutType::Fn(args, Box::new(retty)))
+            (format!("fn_{ffid}"), LayoutType::Fn(FnCallLayout { argtys: args, retty: Box::new(retty) }))
         },
         Expr::NewList => {
             (format!("new_list()"), LayoutType::List)
@@ -207,8 +208,9 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, tyctxt: &TyCtxt, tylctxt: &TyLattic
                     .iter()
                     .next()
                     .map(|&example_callee| fn_type_of(example_callee, ast, tylctxt))
-                    .unwrap_or(LayoutType::Fn(vec![LayoutType::Value; args.len()], Box::new(LayoutType::Value)));
-            let LayoutType::Fn(argtys, retty) = &ty  else { panic!() };
+                    .unwrap_or(FnCallLayout { argtys: vec![LayoutType::Value; args.len()], retty: Box::new(LayoutType::Value) });
+            let FnCallLayout { argtys, retty } = &ty;
+            let ty = LayoutType::Fn(ty.clone());
 
             let f = comp_typed_expr(f, ty.clone(), fid, ast, tyctxt, tylctxt);
 
@@ -286,7 +288,7 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, tyctxt: &TyCtxt, tylctxt: &TyLattic
     }
 }
 
-fn comp_stmt(stmt: &Stmt, fid: FnId, ast: &AST, tyctxt: &TyCtxt, tylctxt: &TyLatticeCtxt, level: usize) -> String {
+fn comp_stmt(stmt: &Stmt, fid: FnId, ast: &AST, tyctxt: &LCtxt, tylctxt: &ACtxt, level: usize) -> String {
     let spaces = "    ".repeat(level+1);
     match stmt {
         Stmt::Global(_) => String::new(),
@@ -330,11 +332,11 @@ fn comp_stmt(stmt: &Stmt, fid: FnId, ast: &AST, tyctxt: &TyCtxt, tylctxt: &TyLat
     }
 }
 
-fn get_ty(loc: Location, tyctxt: &TyCtxt) -> LayoutType {
+fn get_ty(loc: Location, tyctxt: &LCtxt) -> LayoutType {
     tyctxt.get(&loc).cloned().unwrap_or(LayoutType::Value)
 }
 
-fn comp_body(body: &Body, fid: FnId, ast: &AST, tyctxt: &TyCtxt, tylctxt: &TyLatticeCtxt, level: usize) -> String {
+fn comp_body(body: &Body, fid: FnId, ast: &AST, tyctxt: &LCtxt, tylctxt: &ACtxt, level: usize) -> String {
     let mut out = String::new();
     for stmt in body {
         out.push_str(&comp_stmt(stmt, fid, ast, tyctxt, tylctxt, level));

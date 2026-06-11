@@ -4,8 +4,11 @@ pub use ast::*;
 mod parse;
 pub use parse::*;
 
-mod ty;
-pub use ty::*;
+mod analysis;
+pub use analysis::*;
+
+mod layout;
+pub use layout::*;
 
 mod visit;
 pub use visit::*;
