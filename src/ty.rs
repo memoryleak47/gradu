@@ -17,7 +17,7 @@ pub enum LayoutType {
     Str,
     Int,
     List,
-    Fn, // TODO: should be Fn(Vec<LayoutTy>, LayoutTy),
+    Fn(Vec<LayoutType>, Box<LayoutType>),
     Value, // "any"
 }
 
@@ -58,8 +58,8 @@ pub fn ty_infer(ast: &AST) -> TyCtxt {
         }
     }
 
-    m.into_iter()
-     .map(|(v, ty)| (v, layout(ty)))
+    m.iter()
+     .map(|(v, ty)| (*v, layout(ty.clone(), &m, ast)))
      .collect()
 }
 
@@ -209,7 +209,7 @@ impl TypeLattice {
     }
 }
 
-fn layout(x: TypeLattice) -> LayoutType {
+fn layout(x: TypeLattice, ctxt: &TyLatticeCtxt, ast: &AST) -> LayoutType {
     if (x.might_be_int) as u8 + (x.might_be_bool as u8) + (x.might_be_nil as u8) + (x.might_be_str as u8) + (x.might_be_list as u8) + ((x.fn_options.len() > 0) as u8) != 1 {
         LayoutType::Value
     } else if x.might_be_bool { LayoutType::Bool }
@@ -218,8 +218,15 @@ fn layout(x: TypeLattice) -> LayoutType {
     else if x.might_be_nil { LayoutType::Nil }
     else if x.might_be_list { LayoutType::List }
     else if x.might_be_list { LayoutType::List }
-    else if x.fn_options.len() > 0 { LayoutType::Fn }
-    else { LayoutType::Value }
+    else if let Some(&fid) = x.fn_options.iter().next() {
+        let mut argtys = Vec::new();
+        for &a in &ast.fns[fid].args {
+            argtys.push(layout(get(Location::Var(fid, a), ctxt), ctxt, ast));
+        }
+        let retty = layout(get(Location::RetVal(fid), ctxt), ctxt, ast);
+
+        LayoutType::Fn(argtys, Box::new(retty.clone()))
+    } else { LayoutType::Value }
 }
 
 pub fn is_global_var(fid: FnId, varname: Symbol, ast: &AST) -> bool {

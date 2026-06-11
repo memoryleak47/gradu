@@ -1,9 +1,9 @@
 # guess.gradu
 
-fn input_num() {
+input_num = fn() {
     a = input();
     return a + 0;
-}
+};
 
 # OUT: Enter secret number:
 print("Enter secret number:");

@@ -2,21 +2,21 @@
 
 counter = 0;
 
-fn fresh_int() {
+fresh_int = fn() {
     global counter;
 
     out = counter;
     counter = counter + 1;
     return out;
-}
+};
 
-fn do_stuff() {
+do_stuff = fn() {
     x = fresh_int();
     print(x);
 
     y = fresh_int();
     print(y);
-}
+};
 
 _ = do_stuff();
 
