@@ -4,6 +4,9 @@ pub use ast::*;
 mod parse;
 pub use parse::*;
 
+mod nameres;
+pub use nameres::*;
+
 mod analysis;
 pub use analysis::*;
 
@@ -31,7 +34,8 @@ fn main() {
     let s = std::fs::read_to_string(path).unwrap();
 
     let ast = parse(&s);
-    let actxt = analyze(&ast);
-    let lctxt = layout(&actxt, &ast);
-    comp::comp(&ast, &lctxt);
+    let nameres = nameres(&ast);
+    let actxt = analyze(&ast, &nameres);
+    let lctxt = layout(&ast, &nameres, &actxt);
+    comp::comp(&ast, &nameres, &lctxt);
 }

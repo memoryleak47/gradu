@@ -28,9 +28,9 @@ pub struct FnCallLayout {
     pub retty: LayoutType,
 }
 
-pub fn layout(actxt: &ACtxt, ast: &AST) -> LCtxt {
+pub fn layout(ast: &AST, nameres: &Nameres, actxt: &ACtxt) -> LCtxt {
     // 1. UF
-    let (fn_map, actxt, calls) = call_layout_uf(actxt, ast);
+    let (fn_map, actxt, calls) = call_layout_uf(ast, nameres, actxt);
 
     // 2. accumulate FnCallLayouts
     let mut fn_tag_a: HashMap<FnTag, FnCallLattice> = HashMap::new();
@@ -100,7 +100,7 @@ fn uf_union(x: FnId, y: FnId, uf: &mut HashMap<FnId, FnId>) {
     uf.insert(x, y);
 }
 
-fn call_layout_uf(actxt: &ACtxt, ast: &AST) -> (HashMap<FnId, FnTag>, ACtxt, HashMap<*const Expr, FnTag>) {
+fn call_layout_uf(ast: &AST, nameres: &Nameres, actxt: &ACtxt) -> (HashMap<FnId, FnTag>, ACtxt, HashMap<*const Expr, FnTag>) {
     let mut actxt = actxt.clone();
 
     let mut uf = HashMap::new();
@@ -110,7 +110,7 @@ fn call_layout_uf(actxt: &ACtxt, ast: &AST) -> (HashMap<FnId, FnTag>, ACtxt, Has
         visit_body(&f.body, &mut |e: &Expr|{
             if let Expr::FnCall(callee_expr, args) = e {
                 let mut callees = Vec::new();
-                for callee_id in ty_infer_expr(callee_expr, fid, ast, &mut actxt).fn_options {
+                for callee_id in ty_infer_expr(callee_expr, fid, ast, nameres, &mut actxt).fn_options {
                     if ast.fns[callee_id].args.len() != args.len() { continue }
                     callees.push(callee_id);
                 }
