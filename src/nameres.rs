@@ -15,8 +15,10 @@ pub fn nameres(ast: &AST) -> Nameres {
     let mut globals = HashSet::new();
 
     let mut fnids: Vec<_> = (0..ast.fns.len()).collect();
+
     // so "main" is at the last position.
-    fnids.swap_remove(ast.main_fn);
+    let main_idx = fnids.iter().position(|x| *x == ast.main_fn).unwrap();
+    fnids.swap_remove(main_idx);
     fnids.push(ast.main_fn);
 
     for &fid in &fnids {
