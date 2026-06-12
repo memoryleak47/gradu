@@ -43,15 +43,24 @@ pub fn nameres(ast: &AST) -> Nameres {
         let mut vmap = HashMap::new();
 
         for x in &(&(&global | &read) | &assigned) | &args {
-            let kind = if args.contains(&x) {
-                VarKind::Local
-            } else if global.contains(&x) {
-                VarKind::Global
-            } else if assigned.contains(&x) && fid != ast.main_fn {
-                VarKind::Local
-            } else { // only read.
-                VarKind::Global
-            };
+            let kind =
+                if fid == ast.main_fn {
+                    if globals.contains(&x) { // if some other fn accesses it, then we have to make it global.
+                        VarKind::Global
+                    } else {
+                        VarKind::Local
+                    }
+                } else {
+                    if args.contains(&x) {
+                        VarKind::Local
+                    } else if global.contains(&x) {
+                        VarKind::Global
+                    } else if assigned.contains(&x) && fid != ast.main_fn {
+                        VarKind::Local
+                    } else { // only read.
+                        VarKind::Global
+                    }
+                };
             if let VarKind::Global = kind {
                 globals.insert(x);
             }
