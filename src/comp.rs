@@ -21,12 +21,12 @@ pub fn comp(ast: &AST, nameres: &Nameres, lctxt: &LCtxt) {
 }
 
 fn compile_ast(ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -> String {
-    let mut compiled = String::from(include_str!("preamble.h"));
+    let mut compiled = String::from(include_str!("../c/preamble.h"));
 
     // lists
     let item_ty = get_ty(LayoutLocation::ListItem, lctxt);
     let item_ty = stringify_layout(&item_ty);
-    let list_h = include_str!("list.h").replace("$T", &item_ty);
+    let list_h = include_str!("../c/list.h").replace("$T", &item_ty);
     compiled.push_str(&list_h);
 
     // dicts
@@ -37,7 +37,7 @@ fn compile_ast(ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -> String {
     let vty = stringify_layout(&vty);
     let k_equ = format!("bool k_equ({kty} k1, {kty} k2) {{\n    return {k_equ_expr};\n}}\n");
     compiled.push_str(&k_equ);
-    let dict_h = include_str!("dict.h").replace("$K", &kty).replace("$V", &vty);
+    let dict_h = include_str!("../c/dict.h").replace("$K", &kty).replace("$V", &vty);
     compiled.push_str(&dict_h);
 
     // globals
