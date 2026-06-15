@@ -35,7 +35,7 @@ pub enum LayoutType {
 
 pub fn layout(ast: &AST, nameres: &Nameres, actxt: &ACtxt) -> LCtxt {
     let (fn_to_tag, call_to_tag) = choose_tags(ast, nameres, actxt);
-    let locs = build_locs(ast, nameres, actxt, &fn_to_tag);
+    let locs = build_locs(ast, actxt, &fn_to_tag);
 
     LCtxt {
         fn_to_tag,
@@ -44,7 +44,7 @@ pub fn layout(ast: &AST, nameres: &Nameres, actxt: &ACtxt) -> LCtxt {
     }
 }
 
-fn build_locs(ast: &AST, nameres: &Nameres, actxt: &ACtxt, fn_to_tag: &HashMap<FnId, FnTag>) -> HashMap<LayoutLocation, LayoutType> {
+fn build_locs(ast: &AST, actxt: &ACtxt, fn_to_tag: &HashMap<FnId, FnTag>) -> HashMap<LayoutLocation, LayoutType> {
     let mut map: HashMap<LayoutLocation, TypeLattice> = HashMap::new();
     for (loc, l) in actxt.iter() {
         let loc = to_layout_location(*loc, ast, fn_to_tag);
