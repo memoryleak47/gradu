@@ -21,11 +21,10 @@ pub fn comp(ast: &AST, nameres: &Nameres, lctxt: &LCtxt) {
 }
 
 fn compile_ast(ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -> String {
-
     let mut compiled = String::from(include_str!("preamble.h"));
 
     // lists
-    let item_ty = get_ty(Location::ListItem, lctxt);
+    let item_ty = get_ty(LayoutLocation::ListItem, lctxt);
     let item_ty = stringify_layout(&item_ty);
     let list_h = include_str!("list.h").replace("T", &item_ty);
     compiled.push_str(&list_h);
@@ -33,7 +32,7 @@ fn compile_ast(ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -> String {
     // globals
     compiled.push_str("\n");
     for &v in &nameres.globals {
-        let layout = get_ty(Location::GlobalVar(v), lctxt);
+        let layout = get_ty(LayoutLocation::GlobalVar(v), lctxt);
         compiled.push_str(&format!("{};\n", make_decl(&layout, v)));
     }
     compiled.push_str("\n");
@@ -64,15 +63,16 @@ fn stringify_layout(ty: &LayoutType) -> String {
 fn compile_fn(fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -> String {
     let f = &ast.fns[fid];
 
+    let tag = lctxt.fn_to_tag[&fid];
+
     // retval
-    let retval = get_ty(Location::RetVal(fid), lctxt);
+    let retval = get_ty(LayoutLocation::RetVal(tag), lctxt);
     let retval = stringify_layout(&retval);
 
     // args
     let mut args_s = String::new();
     for (i, arg) in f.args.iter().enumerate() {
-        let l = Location::Var(fid, *arg);
-        let argty = get_ty(l, lctxt);
+        let argty = get_ty(LayoutLocation::Arg(tag, i), lctxt);
         args_s.push_str(&make_decl(&argty, *arg));
         if i != f.args.len() - 1 {
             args_s.push_str(", ");
@@ -84,7 +84,7 @@ fn compile_fn(fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -> String 
     for (v, kind) in &nameres.vars[fid] {
         let VarKind::Local = kind else { continue };
         if ast.fns[fid].args.contains(&v) { continue }
-        let varty = get_ty(Location::Var(fid, *v), lctxt);
+        let varty = get_ty(LayoutLocation::Var(fid, *v), lctxt);
         varprefix.push_str(&format!("    {};\n", make_decl(&varty, *v)));
     }
 
@@ -161,7 +161,7 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -
             let l = comp_typed_expr(l, LayoutType::List, fid, ast, nameres, lctxt);
             let i = comp_typed_expr(i, LayoutType::Int, fid, ast, nameres, lctxt);
 
-            let ty = get_ty(Location::ListItem, lctxt);
+            let ty = get_ty(LayoutLocation::ListItem, lctxt);
 
             (format!("index_list({l}, {i})"), ty)
         },
@@ -170,21 +170,29 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -
                 // This is only None, if no function can ever be called in this expr.
                 return (format!("fail(\"runtime error: wrong arity fn call.\")"), LayoutType::Value)
             };
-            let layout = &lctxt.tag_to_layout[&tag];
-            let FnCallLayout { argtys, retty } = layout;
 
             let f = comp_typed_expr(f, LayoutType::Fn(tag), fid, ast, nameres, lctxt);
 
+            let retty = get_ty(LayoutLocation::RetVal(tag), lctxt);
+
+            let mut ty_str = format!("{} (*)(", stringify_layout(&retty));
             let mut args_str = String::new();
-            for (i, (t, e)) in argtys.iter().zip(args).enumerate() {
-                let e = comp_typed_expr(e, t.clone(), fid, ast, nameres, lctxt);
+
+            for (i, e) in args.iter().enumerate() {
+                let t = get_ty(LayoutLocation::Arg(tag, i), lctxt);
+
+                ty_str.push_str(&stringify_layout(&t));
+
+                let e = comp_typed_expr(e, t, fid, ast, nameres, lctxt);
                 args_str.push_str(&e);
+
                 if i != args.len() - 1 {
+                    ty_str.push_str(", ");
                     args_str.push_str(", ");
                 }
             }
+            ty_str.push(')');
 
-            let ty_str = fn_ty_str(layout);
             let fstr = format!("(({ty_str}) {f})");
             (format!("{fstr}({args_str})"), retty.clone())
         },
@@ -239,7 +247,7 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -
             }
         },
         Expr::Var(v) => {
-            let l = get_var_loc(fid, *v, nameres);
+            let l = get_var_loc2(fid, *v, ast, nameres, lctxt);
             let ty = get_ty(l, lctxt);
             (format!("{v}"), ty)
         },
@@ -254,26 +262,26 @@ fn comp_stmt(stmt: &Stmt, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt
     match stmt {
         Stmt::Global(_) => String::new(),
         Stmt::ListStore(l, i, v) => {
-            let ty = get_ty(Location::ListItem, lctxt);
+            let ty = get_ty(LayoutLocation::ListItem, lctxt);
             let l = comp_typed_expr(l, LayoutType::List, fid, ast, nameres, lctxt);
             let i = comp_typed_expr(i, LayoutType::Int, fid, ast, nameres, lctxt);
             let v = comp_typed_expr(v, ty, fid, ast, nameres, lctxt);
             format!("{spaces}store_list({l}, {i}, {v});\n")
         },
         Stmt::Push(l, v) => {
-            let ty = get_ty(Location::ListItem, lctxt);
+            let ty = get_ty(LayoutLocation::ListItem, lctxt);
             let l = comp_typed_expr(l, LayoutType::List, fid, ast, nameres, lctxt);
             let v = comp_typed_expr(v, ty, fid, ast, nameres, lctxt);
             format!("{spaces}push_list({l}, {v});\n")
         },
         Stmt::Assign(v, e) => {
-            let loc = get_var_loc(fid, *v, nameres);
+            let loc = get_var_loc2(fid, *v, ast, nameres, lctxt);
             let ty = get_ty(loc, lctxt);
             let e = comp_typed_expr(e, ty, fid, ast, nameres, lctxt);
             format!("{spaces}{v} = {e};\n")
         },
         Stmt::Return(e) => {
-            let loc = Location::RetVal(fid);
+            let loc = LayoutLocation::RetVal(lctxt.fn_to_tag[&fid]);
             let ty = get_ty(loc, lctxt);
             let e = comp_typed_expr(e, ty, fid, ast, nameres, lctxt);
             format!("{spaces}return {e};\n")
@@ -293,7 +301,7 @@ fn comp_stmt(stmt: &Stmt, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt
     }
 }
 
-fn get_ty(loc: Location, lctxt: &LCtxt) -> LayoutType {
+fn get_ty(loc: LayoutLocation, lctxt: &LCtxt) -> LayoutType {
     lctxt.locs.get(&loc).cloned().unwrap_or(LayoutType::Value)
 }
 
@@ -305,16 +313,7 @@ fn comp_body(body: &Body, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt
     out
 }
 
-fn fn_ty_str(layout: &FnCallLayout) -> String {
-    let FnCallLayout { argtys: args, retty: ret } = layout;
-    let ret = stringify_layout(ret);
-    let mut s = format!("{ret} (*)(");
-    for (i, a) in args.iter().enumerate() {
-        s.push_str(&stringify_layout(a));
-        if i != args.len()-1 {
-            s.push_str(", ");
-        }
-    }
-    s.push(')');
-    return s
+fn get_var_loc2(fid: FnId, v: Symbol, ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -> LayoutLocation {
+    let loc = get_var_loc(fid, v, nameres);
+    to_layout_location(loc, ast, &lctxt.fn_to_tag)
 }

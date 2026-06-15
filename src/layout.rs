@@ -8,8 +8,18 @@ pub struct LCtxt {
     pub fn_to_tag: HashMap<FnId, FnTag>,
     pub call_to_tag: HashMap<*const Expr, FnTag>,
 
-    pub tag_to_layout: HashMap<FnTag, FnCallLayout>,
-    pub locs: HashMap<Location, LayoutType>,
+    pub locs: HashMap<LayoutLocation, LayoutType>,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum LayoutLocation {
+    Arg(FnTag, usize),
+    RetVal(FnTag),
+
+    Var(/*fn*/ FnId, /*var*/ Symbol), // excluding fn args (those are governed by FnTag)
+    GlobalVar(/*var*/ Symbol),
+
+    ListItem,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -23,43 +33,43 @@ pub enum LayoutType {
     Value, // "any"
 }
 
-pub struct FnCallLayout {
-    pub argtys: Vec<LayoutType>,
-    pub retty: LayoutType,
-}
-
 pub fn layout(ast: &AST, nameres: &Nameres, actxt: &ACtxt) -> LCtxt {
-    // 1. UF
-    let (fn_to_tag, actxt, call_to_tag) = call_layout_uf(ast, nameres, actxt);
-
-    // 2. accumulate FnCallLayouts
-    let mut fn_tag_a: HashMap<FnTag, FnCallLattice> = HashMap::new();
-    for f in 0..ast.fns.len() {
-        let tag = fn_to_tag[&f];
-        if fn_tag_a.get(&tag).is_none() {
-            let arity = ast.fns[f].args.len();
-            fn_tag_a.insert(tag, FnCallLattice::bot(arity));
-        }
-        let flat = FnCallLattice::mk(f, &actxt, ast);
-        fn_tag_a.insert(tag, FnCallLattice::merge(&fn_tag_a[&tag], &flat));
-    }
-
-    let tag_to_layout = fn_tag_a.into_iter().map(|(k, v)| {
-        let argtys = v.argtys.iter().map(|x| layout_lat(x, &fn_to_tag)).collect();
-        let retty = layout_lat(&v.retty, &fn_to_tag);
-        let v = FnCallLayout { argtys, retty };
-        (k, v)
-    }).collect();
-
-    let locs = actxt.iter()
-     .map(|(v, ty)| (*v, layout_lat(ty, &fn_to_tag)))
-     .collect();
+    let (fn_to_tag, call_to_tag) = choose_tags(ast, nameres, actxt);
+    let locs = build_locs(ast, nameres, actxt, &fn_to_tag);
 
     LCtxt {
         fn_to_tag,
         call_to_tag,
-        tag_to_layout,
         locs,
+    }
+}
+
+fn build_locs(ast: &AST, nameres: &Nameres, actxt: &ACtxt, fn_to_tag: &HashMap<FnId, FnTag>) -> HashMap<LayoutLocation, LayoutType> {
+    let mut map: HashMap<LayoutLocation, TypeLattice> = HashMap::new();
+    for (loc, l) in actxt.iter() {
+        let loc = to_layout_location(*loc, ast, fn_to_tag);
+        let r = map.entry(loc).or_insert(TypeLattice::bot());
+        *r = TypeLattice::merge(r, l);
+    }
+
+    map.into_iter()
+       .map(|(loc, lat)| (loc, layout_lat(&lat, fn_to_tag)))
+       .collect()
+}
+
+pub fn to_layout_location(loc: Location, ast: &AST, fn_to_tag: &HashMap<FnId, FnTag>) -> LayoutLocation {
+    match loc {
+        Location::Var(f, var) => {
+            if let Some(i) = ast.fns[f].args.iter().position(|x| *x == var) {
+                LayoutLocation::Arg(fn_to_tag[&f], i)
+            } else {
+                LayoutLocation::Var(f, var)
+            }
+        },
+        Location::GlobalVar(v) => LayoutLocation::GlobalVar(v),
+        Location::RetVal(f) => LayoutLocation::RetVal(fn_to_tag[&f]),
+        Location::ListItem => LayoutLocation::ListItem,
+
     }
 }
 
@@ -83,7 +93,52 @@ fn layout_lat(x: &TypeLattice, fn_to_tag: &HashMap<FnId, FnTag>) -> LayoutType {
     } else { LayoutType::Value }
 }
 
-/// Unionfind
+/// Chooose Tags
+
+fn choose_tags(ast: &AST, nameres: &Nameres, actxt: &ACtxt) -> (HashMap<FnId, FnTag>, HashMap<*const Expr, FnTag>) {
+    let mut uf = HashMap::new();
+    let mut call_to_fn = HashMap::new();
+
+    // 1. find all fn call sites, and group fns based on it.
+    let mut actxt = actxt.clone();
+    for (fid, f) in ast.fns.iter().enumerate() {
+        visit_body(&f.body, &mut |e: &Expr|{
+            if let Expr::FnCall(callee_expr, args) = e {
+                let mut callees = Vec::new();
+                for callee_id in ty_infer_expr(callee_expr, fid, ast, nameres, &mut actxt).fn_options {
+                    if ast.fns[callee_id].args.len() != args.len() { continue }
+                    callees.push(callee_id);
+                }
+                if callees.len() >= 1 {
+                    let first = callees[0];
+                    call_to_fn.insert(e as *const Expr, first);
+                    for &later in &callees[1..] {
+                        uf_union(first, later, &mut uf);
+                    }
+                }
+            }
+        }, &mut |_|{});
+    }
+    drop(actxt);
+
+    let mut fn_to_tag = HashMap::new();
+    for follower in 0..ast.fns.len() {
+        let leader = uf_find(follower, &uf);
+        if fn_to_tag.get(&leader).is_none() {
+            fn_to_tag.insert(leader, fn_to_tag.len() + 10);
+        }
+        let v = fn_to_tag[&leader];
+        fn_to_tag.insert(follower, v);
+    }
+
+    let mut call_to_tag = HashMap::new();
+    for (e, f) in call_to_fn {
+        call_to_tag.insert(e, fn_to_tag[&f]);
+    }
+
+    (fn_to_tag, call_to_tag)
+}
+
 // non-reflexive unionfind! so, leaders are missing as keys.
 fn uf_find(mut x: FnId, uf: &HashMap<FnId, FnId>) -> FnId {
     while let Some(y) = uf.get(&x) {
@@ -98,114 +153,4 @@ fn uf_union(x: FnId, y: FnId, uf: &mut HashMap<FnId, FnId>) {
     if x == y { return }
 
     uf.insert(x, y);
-}
-
-fn call_layout_uf(ast: &AST, nameres: &Nameres, actxt: &ACtxt) -> (HashMap<FnId, FnTag>, ACtxt, HashMap<*const Expr, FnTag>) {
-    let mut actxt = actxt.clone();
-
-    let mut uf = HashMap::new();
-    let mut call_to_tag = HashMap::new();
-
-    for (fid, f) in ast.fns.iter().enumerate() {
-        visit_body(&f.body, &mut |e: &Expr|{
-            if let Expr::FnCall(callee_expr, args) = e {
-                let mut callees = Vec::new();
-                for callee_id in ty_infer_expr(callee_expr, fid, ast, nameres, &mut actxt).fn_options {
-                    if ast.fns[callee_id].args.len() != args.len() { continue }
-                    callees.push(callee_id);
-                }
-                if callees.len() >= 1 {
-                    let first = callees[0];
-                    call_to_tag.insert(e as *const Expr, first);
-                    for &later in &callees[1..] {
-                        uf_union(first, later, &mut uf);
-                    }
-                }
-            }
-        }, &mut |_|{});
-    }
-
-    // 2. update actxt
-    for &follower in uf.keys() {
-        let leader = uf_find(follower, &uf);
-        inherit_fn_analysis(follower, leader, ast, &mut actxt);
-    }
-
-    // leader -> follower to share back.
-    for &follower in uf.keys() {
-        let leader = uf_find(follower, &uf);
-        inherit_fn_analysis(leader, follower, ast, &mut actxt);
-    }
-
-    let mut fn_to_tag = HashMap::new();
-    for follower in 0..ast.fns.len() {
-        let leader = uf_find(follower, &uf);
-        if fn_to_tag.get(&leader).is_none() {
-            fn_to_tag.insert(leader, fn_to_tag.len() + 10);
-        }
-        let v = fn_to_tag[&leader];
-        fn_to_tag.insert(follower, v);
-    }
-
-    let mut call_to_tag2 = HashMap::new();
-    for (e, v) in call_to_tag {
-        call_to_tag2.insert(e, fn_to_tag[&v]);
-    }
-
-    (fn_to_tag, actxt, call_to_tag2)
-}
-
-
-#[derive(Clone)]
-struct FnCallLattice {
-    argtys: Vec<TypeLattice>,
-    retty: TypeLattice,
-}
-
-
-impl FnCallLattice {
-    fn bot(n: usize) -> FnCallLattice {
-        FnCallLattice {
-            argtys: vec![TypeLattice::bot(); n],
-            retty: TypeLattice::bot(),
-        }
-    }
-
-    fn merge(l1: &FnCallLattice, l2: &FnCallLattice) -> FnCallLattice {
-        let mut l1: FnCallLattice = l1.clone();
-        for i in 0..l1.argtys.len() {
-            l1.argtys[i] = TypeLattice::merge(&l1.argtys[i], &l2.argtys[i]);
-        }
-        l1.retty = TypeLattice::merge(&l1.retty, &l2.retty);
-
-        l1
-    }
-
-    fn mk(fid: FnId, actxt: &ACtxt, ast: &AST) -> FnCallLattice {
-        let mut argtys = Vec::new();
-        for &x in &ast.fns[fid].args {
-            argtys.push(get(Location::Var(fid, x), actxt));
-        }
-
-        let retty = get(Location::RetVal(fid), actxt);
-
-        FnCallLattice {
-            argtys,
-            retty,
-        }
-    }
-}
-
-
-fn inherit_fn_analysis(from: FnId, to: FnId, ast: &AST, actxt: &mut ACtxt) {
-    let from_fdef = &ast.fns[from];
-    let to_fdef = &ast.fns[to];
-
-    // retval
-    add(Location::RetVal(to), &get(Location::RetVal(from), actxt), actxt);
-
-    // args
-    for (&from_a, &to_a) in from_fdef.args.iter().zip(to_fdef.args.iter()) {
-        add(Location::Var(to, to_a), &get(Location::Var(from, from_a), actxt), actxt);
-    }
 }
