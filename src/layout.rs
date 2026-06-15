@@ -5,10 +5,10 @@ use crate::*;
 pub type FnTag = usize;
 
 pub struct LCtxt {
-    pub fn_map: HashMap<FnId, FnTag>,
-    pub calls: HashMap<*const Expr, FnTag>,
+    pub fn_to_tag: HashMap<FnId, FnTag>,
+    pub call_to_tag: HashMap<*const Expr, FnTag>,
 
-    pub fn_tag_layout: HashMap<FnTag, FnCallLayout>,
+    pub tag_to_layout: HashMap<FnTag, FnCallLayout>,
     pub locs: HashMap<Location, LayoutType>,
 }
 
@@ -30,12 +30,12 @@ pub struct FnCallLayout {
 
 pub fn layout(ast: &AST, nameres: &Nameres, actxt: &ACtxt) -> LCtxt {
     // 1. UF
-    let (fn_map, actxt, calls) = call_layout_uf(ast, nameres, actxt);
+    let (fn_to_tag, actxt, call_to_tag) = call_layout_uf(ast, nameres, actxt);
 
     // 2. accumulate FnCallLayouts
     let mut fn_tag_a: HashMap<FnTag, FnCallLattice> = HashMap::new();
     for f in 0..ast.fns.len() {
-        let tag = fn_map[&f];
+        let tag = fn_to_tag[&f];
         if fn_tag_a.get(&tag).is_none() {
             let arity = ast.fns[f].args.len();
             fn_tag_a.insert(tag, FnCallLattice::bot(arity));
@@ -44,26 +44,26 @@ pub fn layout(ast: &AST, nameres: &Nameres, actxt: &ACtxt) -> LCtxt {
         fn_tag_a.insert(tag, FnCallLattice::merge(&fn_tag_a[&tag], &flat));
     }
 
-    let fn_tag_layout = fn_tag_a.into_iter().map(|(k, v)| {
-        let argtys = v.argtys.iter().map(|x| layout_lat(x, &fn_map)).collect();
-        let retty = layout_lat(&v.retty, &fn_map);
+    let tag_to_layout = fn_tag_a.into_iter().map(|(k, v)| {
+        let argtys = v.argtys.iter().map(|x| layout_lat(x, &fn_to_tag)).collect();
+        let retty = layout_lat(&v.retty, &fn_to_tag);
         let v = FnCallLayout { argtys, retty };
         (k, v)
     }).collect();
 
     let locs = actxt.iter()
-     .map(|(v, ty)| (*v, layout_lat(ty, &fn_map)))
+     .map(|(v, ty)| (*v, layout_lat(ty, &fn_to_tag)))
      .collect();
 
     LCtxt {
-        fn_map,
-        calls,
-        fn_tag_layout,
+        fn_to_tag,
+        call_to_tag,
+        tag_to_layout,
         locs,
     }
 }
 
-fn layout_lat(x: &TypeLattice, fn_map: &HashMap<FnId, FnTag>) -> LayoutType {
+fn layout_lat(x: &TypeLattice, fn_to_tag: &HashMap<FnId, FnTag>) -> LayoutType {
     if (x.might_be_int) as u8 + (x.might_be_bool as u8) + (x.might_be_nil as u8) + (x.might_be_str as u8) + (x.might_be_list as u8) + ((x.fn_options.len() > 0) as u8) != 1 {
         LayoutType::Value
     } else if x.might_be_bool { LayoutType::Bool }
@@ -72,10 +72,10 @@ fn layout_lat(x: &TypeLattice, fn_map: &HashMap<FnId, FnTag>) -> LayoutType {
     else if x.might_be_nil { LayoutType::Nil }
     else if x.might_be_list { LayoutType::List }
     else if let Some(fid) = x.fn_options.iter().next() {
-        let tag = fn_map[fid];
+        let tag = fn_to_tag[fid];
         // We only return a particular layout, if all fns agree on that layout.
         for other in x.fn_options.iter() {
-            if tag != fn_map[other] {
+            if tag != fn_to_tag[other] {
                 return LayoutType::Value
             }
         }
@@ -104,7 +104,7 @@ fn call_layout_uf(ast: &AST, nameres: &Nameres, actxt: &ACtxt) -> (HashMap<FnId,
     let mut actxt = actxt.clone();
 
     let mut uf = HashMap::new();
-    let mut calls = HashMap::new();
+    let mut call_to_tag = HashMap::new();
 
     for (fid, f) in ast.fns.iter().enumerate() {
         visit_body(&f.body, &mut |e: &Expr|{
@@ -116,7 +116,7 @@ fn call_layout_uf(ast: &AST, nameres: &Nameres, actxt: &ACtxt) -> (HashMap<FnId,
                 }
                 if callees.len() >= 1 {
                     let first = callees[0];
-                    calls.insert(e as *const Expr, first);
+                    call_to_tag.insert(e as *const Expr, first);
                     for &later in &callees[1..] {
                         uf_union(first, later, &mut uf);
                     }
@@ -137,22 +137,22 @@ fn call_layout_uf(ast: &AST, nameres: &Nameres, actxt: &ACtxt) -> (HashMap<FnId,
         inherit_fn_analysis(leader, follower, ast, &mut actxt);
     }
 
-    let mut fn_map = HashMap::new();
+    let mut fn_to_tag = HashMap::new();
     for follower in 0..ast.fns.len() {
         let leader = uf_find(follower, &uf);
-        if fn_map.get(&leader).is_none() {
-            fn_map.insert(leader, fn_map.len() + 10);
+        if fn_to_tag.get(&leader).is_none() {
+            fn_to_tag.insert(leader, fn_to_tag.len() + 10);
         }
-        let v = fn_map[&leader];
-        fn_map.insert(follower, v);
+        let v = fn_to_tag[&leader];
+        fn_to_tag.insert(follower, v);
     }
 
-    let mut calls2 = HashMap::new();
-    for (e, v) in calls {
-        calls2.insert(e, fn_map[&v]);
+    let mut call_to_tag2 = HashMap::new();
+    for (e, v) in call_to_tag {
+        call_to_tag2.insert(e, fn_to_tag[&v]);
     }
 
-    (fn_map, actxt, calls2)
+    (fn_to_tag, actxt, call_to_tag2)
 }
 
 

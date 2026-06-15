@@ -148,7 +148,7 @@ fn comp_typed_expr(e: &Expr, ty: LayoutType, fid: FnId, ast: &AST, nameres: &Nam
 fn comp_expr(e: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -> (String, LayoutType) {
     match e {
         Expr::FnId(ffid) => {
-            (format!("fn_{ffid}"), LayoutType::Fn(lctxt.fn_map[&ffid]))
+            (format!("fn_{ffid}"), LayoutType::Fn(lctxt.fn_to_tag[&ffid]))
         },
         Expr::NewList => {
             (format!("new_list()"), LayoutType::List)
@@ -166,11 +166,11 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -
             (format!("index_list({l}, {i})"), ty)
         },
         Expr::FnCall(f, args) => {
-            let Some(&tag) = lctxt.calls.get(&(e as *const Expr)) else {
+            let Some(&tag) = lctxt.call_to_tag.get(&(e as *const Expr)) else {
                 // This is only None, if no function can ever be called in this expr.
                 return (format!("fail(\"runtime error: wrong arity fn call.\")"), LayoutType::Value)
             };
-            let layout = &lctxt.fn_tag_layout[&tag];
+            let layout = &lctxt.tag_to_layout[&tag];
             let FnCallLayout { argtys, retty } = layout;
 
             let f = comp_typed_expr(f, LayoutType::Fn(tag), fid, ast, nameres, lctxt);
