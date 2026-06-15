@@ -16,7 +16,7 @@ pub struct FnDef {
 
 pub type Body = Vec<Stmt>;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Stmt {
     Global(Symbol),
     Return(Expr),
@@ -29,7 +29,7 @@ pub enum Stmt {
     Print(Expr),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expr {
     FnId(FnId),
     NewList,
@@ -46,7 +46,7 @@ pub enum Expr {
     FnCall(Box<Expr>, Vec<Expr>),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum BinOpKind {
     Lt,
     Gt,

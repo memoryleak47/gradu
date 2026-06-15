@@ -43,6 +43,16 @@ Expr1: Expr = {
 
 Expr0: Expr = {
     <f:Expr0> "(" <args:Comma<Expr>> ")" => Expr::FnCall(Box::new(f), args),
+    <ident:Ident> ":" <method:Ident> "(" <args:Comma<Expr>> ")" => {
+        let var = Expr::Var(ident);
+
+        let mut args = args;
+        args.insert(0, var.clone());
+
+        let method = Expr::StringLit(method.to_string());
+        let f = Expr::IndexDict(Box::new(var), Box::new(method));
+        Expr::FnCall(Box::new(f), args)
+    },
     <l:Expr0> ".length" => Expr::Length(Box::new(l)),
     <l:LValue> => {
         match l {
@@ -57,6 +67,7 @@ Expr0: Expr = {
         g_ast.fns.push(FnDef { args, body });
         Expr::FnId(i)
     },
+
     "[" "]" => Expr::NewList,
     "{" "}" => Expr::NewDict,
     <n:Num> => Expr::IntLit(n),

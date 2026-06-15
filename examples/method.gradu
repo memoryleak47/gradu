@@ -1,0 +1,25 @@
+# method.gradu
+
+mk_point = fn(x, y) {
+    point = {};
+    point[["x"]] = x;
+    point[["y"]] = y;
+
+    point[["add"]] = fn(self, other) {
+        return mk_point(
+            self[["x"]] + other[["x"]],
+            self[["y"]] + other[["y"]]
+        );
+    };
+
+    return point;
+};
+
+point1 = mk_point(7, 18);
+point2 = mk_point(35, 24);
+res = point1:add(point2);
+
+# OUT: 42
+print(res[["x"]]);
+# OUT: 42
+print(res[["y"]]);
