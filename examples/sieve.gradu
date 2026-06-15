@@ -15,7 +15,6 @@ count_primes = fn(x) {
                 sieve[i*k] = false;
                 k = k+1;
             }
-        } else {
         }
         i = i+1;
     }
@@ -26,7 +25,7 @@ count_primes = fn(x) {
     while i < sieve.length {
         if sieve[i] {
             primes = primes+1;
-        } else {}
+        }
         i = i+1;
     }
     return primes;

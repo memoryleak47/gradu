@@ -86,6 +86,7 @@ Stmt: Stmt = {
     },
     "print" "(" <e:Expr> ")" ";" => Stmt::Print(e),
     "if" <c: Expr> "{" <then_:Body> "}" "else" "{" <else_:Body> "}" => Stmt::If(c, then_, else_),
+    "if" <c: Expr> "{" <then_:Body> "}" => Stmt::If(c, then_, Vec::new()),
     "while" <c:Expr> "{" <body:Body> "}" => Stmt::While(c, body),
     "return" <e:Expr> ";" => Stmt::Return(e),
 };

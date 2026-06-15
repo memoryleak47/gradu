@@ -7,10 +7,10 @@ d = 42;
 
 _ = c("wow");
 
-if (true) { f = d; } else { }
-if (true) { f = c; } else { }
-if (true) { f = b; } else { }
-if (true) { f = a; } else { }
+if (true) { f = d; }
+if (true) { f = c; }
+if (true) { f = b; }
+if (true) { f = a; }
 
 # OUT: 42
 print(f(41));

@@ -18,7 +18,7 @@ uf_union = fn(uf, x, y) {
     y = uf_find(uf, y);
     if x != y {
         uf[x] = y;
-    } else {}
+    }
 };
 
 uf = [];
