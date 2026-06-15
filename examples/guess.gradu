@@ -10,15 +10,15 @@ print("Enter secret number:");
 secret = input_num();
 
 running = true;
-while (running) {
+while running {
     print("Enter guessing number:");
     i = input_num();
 
-    if (i == secret) {
+    if i == secret {
         running = false;
         print("You got it!");
     } else {
-        if (i < secret) {
+        if i < secret {
             print("too small!");
         } else {
             print("too big!");

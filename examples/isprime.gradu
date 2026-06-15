@@ -2,12 +2,12 @@
 
 x = 479001599;
 isprime = true;
-if (x < 2) {
+if x < 2 {
     isprime = false;
 } else {
     i = 2;
-    while (i < x) {
-        if ((x%i) == 0) {
+    while i < x {
+        if (x%i) == 0 {
             isprime = false;
             i = x;
         } else {

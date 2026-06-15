@@ -3,7 +3,7 @@
 map = fn(l, f) {
     l2 = [];
     i = 0;
-    while (i < (l.length)) {
+    while i < l.length {
         l2.push(f(l[i]));
         i = i+1;
     }
@@ -13,8 +13,8 @@ map = fn(l, f) {
 sum = fn(l) {
     s = 0;
     i = 0;
-    while (i < (l.length)) {
-        s = s + (l[i]);
+    while i < l.length {
+        s = s + l[i];
         i = i+1;
     }
     return s;

@@ -8,7 +8,7 @@ b = fn(x) { return "ok"; };
 
 _ = b("wow");
 
-if (true) {
+if true {
     f = a;
 } else {
     f = b;

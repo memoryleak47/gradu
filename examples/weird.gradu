@@ -2,4 +2,4 @@ l = [];
 l.push(l);
 
 # OUT: true
-print(l == (l[0]));
+print(l == l[0]);

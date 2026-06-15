@@ -11,23 +11,28 @@ pub AST: () = {
     },
 };
 
-pub Body: Body = {
+Body: Body = {
     <b:Stmt*> => b,
 };
 
-pub Args: Vec<Symbol> = Comma<Ident>;
+Args: Vec<Symbol> = Comma<Ident>;
 
-pub Expr: Expr = {
-    <e:SafeExpr> => e,
-    <e1:SafeExpr> <binop:BinOp> <e2:SafeExpr> => Expr::BinOp(binop, Box::new(e1), Box::new(e2)),
-    <l:SafeExpr> "[" <i:SafeExpr> "]" => Expr::IndexList(Box::new(l), Box::new(i)),
-    <t:SafeExpr> "[[" <k:SafeExpr> "]]" => Expr::IndexDict(Box::new(t), Box::new(k)),
-    <f:SafeExpr> "(" <args:Comma<Expr>> ")" => Expr::FnCall(Box::new(f), args),
+Expr: Expr = {
+    <e1:Expr0> <binop:BinOp> <e2:Expr0> => Expr::BinOp(binop, Box::new(e1), Box::new(e2)),
+    <e:Expr0> => e,
 };
 
-// SafeExpr is an Expr that can only be "parsed in one way" in any context.
-// A non-safe Expr is something like `a + b`, as `c*a + b` will be parsed wrongly.
-pub SafeExpr: Expr = {
+Expr0: Expr = {
+    <f:Expr0> "(" <args:Comma<Expr>> ")" => Expr::FnCall(Box::new(f), args),
+    <l:Expr0> ".length" => Expr::Length(Box::new(l)),
+    <l:LValue> => {
+        match l {
+            LValue::IndexList(l, i) => Expr::IndexList(Box::new(l), Box::new(i)),
+            LValue::IndexDict(t, k) => Expr::IndexDict(Box::new(t), Box::new(k)),
+            LValue::Var(v) => Expr::Var(v),
+        }
+    },
+
     "fn" "(" <args:Args> ")" "{" <body:Body> "}" => {
         let i = g_ast.fns.len();
         g_ast.fns.push(FnDef { args, body });
@@ -37,15 +42,20 @@ pub SafeExpr: Expr = {
     "{" "}" => Expr::NewDict,
     <n:Num> => Expr::IntLit(n),
     <s:Str> => Expr::StringLit(s),
-    <i:Ident> => Expr::Var(i),
-    "(" <e:Expr> ")" => e,
     "input" "(" ")" => Expr::Input,
     "true" => Expr::BoolLit(true),
     "false" => Expr::BoolLit(false),
-    "(" <l:SafeExpr> "." "length" ")" => Expr::Length(Box::new(l)),
+
+    "(" <Expr> ")" => <>,
 };
 
-pub BinOp: BinOpKind = {
+LValue: LValue = {
+    <l:Expr0> "[" <i:Expr> "]" => LValue::IndexList(l, i),
+    <t:Expr0> "[[" <k:Expr> "]]" => LValue::IndexDict(t, k),
+    <i:Ident> => LValue::Var(i),
+};
+
+BinOp: BinOpKind = {
     ">" => BinOpKind::Gt,
     "<" => BinOpKind::Lt,
     "%" => BinOpKind::Mod,
@@ -56,12 +66,16 @@ pub BinOp: BinOpKind = {
     "!=" => BinOpKind::Ne,
 }
 
-pub Stmt: Stmt = {
+Stmt: Stmt = {
     "global" <v:Ident> ";" => Stmt::Global(v),
-    <l:Expr> "." "push" "(" <v:Expr> ")" ";" => Stmt::Push(l, v),
-    <l:SafeExpr> "[" <i:SafeExpr> "]" "=" <v:Expr> ";" => Stmt::ListStore(l, i, v),
-    <t:SafeExpr> "[[" <k:SafeExpr> "]]" "=" <v:Expr> ";" => Stmt::DictStore(t, k, v),
-    <v:Ident> "=" <e:Expr> ";" => Stmt::Assign(v, e),
+    <l:Expr> ".push" "(" <v:Expr> ")" ";" => Stmt::Push(l, v),
+    <l:LValue> "=" <r:Expr> ";" => {
+        match l {
+            LValue::IndexList(l, i) => Stmt::ListStore(l, i, r),
+            LValue::IndexDict(t, k) => Stmt::DictStore(t, k, r),
+            LValue::Var(v) => Stmt::Assign(v, r),
+        }
+    },
     "print" "(" <e:Expr> ")" ";" => Stmt::Print(e),
     "if" <c: Expr> "{" <then_:Body> "}" "else" "{" <else_:Body> "}" => Stmt::If(c, then_, else_),
     "while" <c:Expr> "{" <body:Body> "}" => Stmt::While(c, body),

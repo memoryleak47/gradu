@@ -57,3 +57,11 @@ pub enum BinOpKind {
     Equ,
     Ne, // !=
 }
+
+// only for parsing!
+#[derive(Debug, PartialEq, Eq)]
+pub enum LValue {
+    IndexList(Expr, Expr),
+    IndexDict(Expr, Expr),
+    Var(Symbol),
+}

@@ -1,13 +1,13 @@
 # uf.gradu
 
 uf_add = fn(uf) {
-    i = (uf.length);
+    i = uf.length;
     uf.push(i);
     return i;
 };
 
 uf_find = fn(uf, x) {
-    while ((uf[x]) != x) {
+    while uf[x] != x {
         x = uf[x];
     }
     return x;
@@ -16,7 +16,7 @@ uf_find = fn(uf, x) {
 uf_union = fn(uf, x, y) {
     x = uf_find(uf, x);
     y = uf_find(uf, y);
-    if (x != y) {
+    if x != y {
         uf[x] = y;
     } else {}
 };
@@ -38,7 +38,7 @@ t = uf_union(uf, c, d);
 t = uf_union(uf, b, f);
 
 # OUT: true
-print((uf_find(uf, a)) == (uf_find(uf, g)));
+print(uf_find(uf, a) == uf_find(uf, g));
 
 # OUT: false
-print((uf_find(uf, a)) == (uf_find(uf, e)));
+print(uf_find(uf, a) == uf_find(uf, e));

@@ -2,17 +2,17 @@
 
 count_primes = fn(x) {
     sieve = [];
-    while ((sieve.length) < (x+1)) {
+    while sieve.length < (x+1) {
         sieve.push(true);
     }
     sieve[0] = false;
     sieve[1] = false;
     i = 2;
-    while (i < (sieve.length)) {
-        if (sieve[i]) {
+    while i < sieve.length {
+        if sieve[i] {
             k = 2;
-            while ((i*k) < (sieve.length)) {
-                sieve[(i*k)] = false;
+            while (i*k) < sieve.length {
+                sieve[i*k] = false;
                 k = k+1;
             }
         } else {
@@ -23,8 +23,8 @@ count_primes = fn(x) {
     primes = 0;
 
     i = 0;
-    while (i < (sieve.length)) {
-        if (sieve[i]) {
+    while i < sieve.length {
+        if sieve[i] {
             primes = primes+1;
         } else {}
         i = i+1;
