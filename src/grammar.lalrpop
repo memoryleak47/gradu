@@ -18,8 +18,27 @@ Body: Body = {
 Args: Vec<Symbol> = Comma<Ident>;
 
 Expr: Expr = {
-    <e1:Expr0> <binop:BinOp> <e2:Expr0> => Expr::BinOp(binop, Box::new(e1), Box::new(e2)),
-    <e:Expr0> => e,
+    Expr3,
+};
+
+Expr3: Expr = {
+    <e1:Expr2> ">" <e2:Expr2> => Expr::BinOp(BinOpKind::Gt, Box::new(e1), Box::new(e2)),
+    <e1:Expr2> "<" <e2:Expr2> => Expr::BinOp(BinOpKind::Lt, Box::new(e1), Box::new(e2)),
+    <e1:Expr2> "==" <e2:Expr2> => Expr::BinOp(BinOpKind::Equ, Box::new(e1), Box::new(e2)),
+    <e1:Expr2> "!=" <e2:Expr2> => Expr::BinOp(BinOpKind::Ne, Box::new(e1), Box::new(e2)),
+    Expr2,
+};
+
+Expr2: Expr = {
+    <e1:Expr1> "*" <e2:Expr1> => Expr::BinOp(BinOpKind::Mul, Box::new(e1), Box::new(e2)),
+    <e1:Expr1> "%" <e2:Expr1> => Expr::BinOp(BinOpKind::Mod, Box::new(e1), Box::new(e2)),
+    Expr1,
+};
+
+Expr1: Expr = {
+    <e1:Expr0> "+" <e2:Expr0> => Expr::BinOp(BinOpKind::Plus, Box::new(e1), Box::new(e2)),
+    <e1:Expr0> "-" <e2:Expr0> => Expr::BinOp(BinOpKind::Minus, Box::new(e1), Box::new(e2)),
+    Expr0,
 };
 
 Expr0: Expr = {
@@ -54,17 +73,6 @@ LValue: LValue = {
     <t:Expr0> "[[" <k:Expr> "]]" => LValue::IndexDict(t, k),
     <i:Ident> => LValue::Var(i),
 };
-
-BinOp: BinOpKind = {
-    ">" => BinOpKind::Gt,
-    "<" => BinOpKind::Lt,
-    "%" => BinOpKind::Mod,
-    "+" => BinOpKind::Plus,
-    "==" => BinOpKind::Equ,
-    "*" => BinOpKind::Mul,
-    "-" => BinOpKind::Minus,
-    "!=" => BinOpKind::Ne,
-}
 
 Stmt: Stmt = {
     "global" <v:Ident> ";" => Stmt::Global(v),
