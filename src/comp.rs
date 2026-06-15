@@ -26,8 +26,19 @@ fn compile_ast(ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -> String {
     // lists
     let item_ty = get_ty(LayoutLocation::ListItem, lctxt);
     let item_ty = stringify_layout(&item_ty);
-    let list_h = include_str!("list.h").replace("T", &item_ty);
+    let list_h = include_str!("list.h").replace("$T", &item_ty);
     compiled.push_str(&list_h);
+
+    // dicts
+    let kty = get_ty(LayoutLocation::DictKey, lctxt);
+    let vty = get_ty(LayoutLocation::DictValue, lctxt);
+    let k_equ_expr = comp_equ(String::from("k1"), kty, String::from("k2"), kty);
+    let kty = stringify_layout(&kty);
+    let vty = stringify_layout(&vty);
+    let k_equ = format!("bool k_equ({kty} k1, {kty} k2) {{\n    return {k_equ_expr};\n}}\n");
+    compiled.push_str(&k_equ);
+    let dict_h = include_str!("dict.h").replace("$K", &kty).replace("$V", &vty);
+    compiled.push_str(&dict_h);
 
     // globals
     compiled.push_str("\n");
@@ -55,6 +66,7 @@ fn stringify_layout(ty: &LayoutType) -> String {
         LayoutType::Bool => "bool",
         LayoutType::Str => "char*",
         LayoutType::List => "list*",
+        LayoutType::Dict => "dict*",
         LayoutType::Fn(_) => "void*",
         LayoutType::Nil => panic!(),
     })
@@ -118,6 +130,7 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
             LayoutType::Int => format!("int_to_value({e})"),
             LayoutType::Str => format!("str_to_value({e})"),
             LayoutType::List => format!("list_to_value({e})"),
+            LayoutType::Dict => format!("dict_to_value({e})"),
             LayoutType::Nil => format!("nil_to_value({e})"),
             LayoutType::Fn(tag) => format!("tagged_fn_to_value({e}, {tag})"),
             LayoutType::Value => unreachable!(),
@@ -128,6 +141,7 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
             LayoutType::Int => format!("value_to_int({e})"),
             LayoutType::Str => format!("value_to_str({e})"),
             LayoutType::List => format!("value_to_list({e})"),
+            LayoutType::Dict => format!("value_to_dict({e})"),
             LayoutType::Nil => todo!(),
             LayoutType::Fn(tag) => format!("value_to_fn_with_tag({e}, {tag})"),
             LayoutType::Value => unreachable!(),
@@ -153,6 +167,9 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -
         Expr::NewList => {
             (format!("new_list()"), LayoutType::List)
         },
+        Expr::NewDict => {
+            (format!("new_dict()"), LayoutType::Dict)
+        },
         Expr::Length(l) => {
             let l = comp_typed_expr(l, LayoutType::List, fid, ast, nameres, lctxt);
             (format!("length({l})"), LayoutType::Int)
@@ -164,6 +181,16 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -
             let ty = get_ty(LayoutLocation::ListItem, lctxt);
 
             (format!("index_list({l}, {i})"), ty)
+        },
+        Expr::IndexDict(t, k) => {
+            let t = comp_typed_expr(t, LayoutType::Dict, fid, ast, nameres, lctxt);
+
+            let kty = get_ty(LayoutLocation::DictKey, lctxt);
+            let k = comp_typed_expr(k, kty, fid, ast, nameres, lctxt);
+
+            let ty = get_ty(LayoutLocation::DictValue, lctxt);
+
+            (format!("index_dict({t}, {k})"), ty)
         },
         Expr::FnCall(f, args) => {
             let Some(&tag) = lctxt.call_to_tag.get(&(e as *const Expr)) else {
@@ -267,6 +294,14 @@ fn comp_stmt(stmt: &Stmt, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt
             let i = comp_typed_expr(i, LayoutType::Int, fid, ast, nameres, lctxt);
             let v = comp_typed_expr(v, ty, fid, ast, nameres, lctxt);
             format!("{spaces}store_list({l}, {i}, {v});\n")
+        },
+        Stmt::DictStore(t, k, v) => {
+            let kty = get_ty(LayoutLocation::DictKey, lctxt);
+            let vty = get_ty(LayoutLocation::DictValue, lctxt);
+            let t = comp_typed_expr(t, LayoutType::Dict, fid, ast, nameres, lctxt);
+            let k = comp_typed_expr(k, kty, fid, ast, nameres, lctxt);
+            let v = comp_typed_expr(v, vty, fid, ast, nameres, lctxt);
+            format!("{spaces}store_dict({t}, {k}, {v});\n")
         },
         Stmt::Push(l, v) => {
             let ty = get_ty(LayoutLocation::ListItem, lctxt);

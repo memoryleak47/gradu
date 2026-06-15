@@ -20,15 +20,18 @@ pub enum LayoutLocation {
     GlobalVar(/*var*/ Symbol),
 
     ListItem,
+    DictKey,
+    DictValue,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LayoutType {
     Bool,
     Nil,
     Str,
     Int,
     List,
+    Dict,
     Fn(FnTag),
     Value, // "any"
 }
@@ -69,18 +72,20 @@ pub fn to_layout_location(loc: Location, ast: &AST, fn_to_tag: &HashMap<FnId, Fn
         Location::GlobalVar(v) => LayoutLocation::GlobalVar(v),
         Location::RetVal(f) => LayoutLocation::RetVal(fn_to_tag[&f]),
         Location::ListItem => LayoutLocation::ListItem,
-
+        Location::DictKey => LayoutLocation::DictKey,
+        Location::DictValue => LayoutLocation::DictValue,
     }
 }
 
 fn layout_lat(x: &TypeLattice, fn_to_tag: &HashMap<FnId, FnTag>) -> LayoutType {
-    if (x.might_be_int) as u8 + (x.might_be_bool as u8) + (x.might_be_nil as u8) + (x.might_be_str as u8) + (x.might_be_list as u8) + ((x.fn_options.len() > 0) as u8) != 1 {
+    if (x.might_be_int) as u8 + (x.might_be_bool as u8) + (x.might_be_nil as u8) + (x.might_be_str as u8) + (x.might_be_list as u8) + (x.might_be_dict as u8) + ((x.fn_options.len() > 0) as u8) != 1 {
         LayoutType::Value
     } else if x.might_be_bool { LayoutType::Bool }
     else if x.might_be_int { LayoutType::Int }
     else if x.might_be_str { LayoutType::Str }
     else if x.might_be_nil { LayoutType::Nil }
     else if x.might_be_list { LayoutType::List }
+    else if x.might_be_dict { LayoutType::Dict }
     else if let Some(fid) = x.fn_options.iter().next() {
         let tag = fn_to_tag[fid];
         // We only return a particular layout, if all fns agree on that layout.

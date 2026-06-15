@@ -21,6 +21,7 @@ pub Expr: Expr = {
     <e:SafeExpr> => e,
     <e1:SafeExpr> <binop:BinOp> <e2:SafeExpr> => Expr::BinOp(binop, Box::new(e1), Box::new(e2)),
     <l:SafeExpr> "[" <i:SafeExpr> "]" => Expr::IndexList(Box::new(l), Box::new(i)),
+    <t:SafeExpr> "[[" <k:SafeExpr> "]]" => Expr::IndexDict(Box::new(t), Box::new(k)),
     <f:SafeExpr> "(" <args:Comma<Expr>> ")" => Expr::FnCall(Box::new(f), args),
 };
 
@@ -33,6 +34,7 @@ pub SafeExpr: Expr = {
         Expr::FnId(i)
     },
     "[" "]" => Expr::NewList,
+    "{" "}" => Expr::NewDict,
     <n:Num> => Expr::IntLit(n),
     <s:Str> => Expr::StringLit(s),
     <i:Ident> => Expr::Var(i),
@@ -58,6 +60,7 @@ pub Stmt: Stmt = {
     "global" <v:Ident> ";" => Stmt::Global(v),
     <l:Expr> "." "push" "(" <v:Expr> ")" ";" => Stmt::Push(l, v),
     <l:SafeExpr> "[" <i:SafeExpr> "]" "=" <v:Expr> ";" => Stmt::ListStore(l, i, v),
+    <t:SafeExpr> "[[" <k:SafeExpr> "]]" "=" <v:Expr> ";" => Stmt::DictStore(t, k, v),
     <v:Ident> "=" <e:Expr> ";" => Stmt::Assign(v, e),
     "print" "(" <e:Expr> ")" ";" => Stmt::Print(e),
     "if" <c: Expr> "{" <then_:Body> "}" "else" "{" <else_:Body> "}" => Stmt::If(c, then_, else_),

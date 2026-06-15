@@ -7,6 +7,7 @@ pub struct TypeLattice {
     pub might_be_str: bool,
     pub might_be_int: bool,
     pub might_be_list: bool,
+    pub might_be_dict: bool,
     pub fn_options: HashSet<FnId>,
 }
 
@@ -19,6 +20,8 @@ pub enum Location {
     GlobalVar(/*var*/ Symbol),
     RetVal(/*fn*/ FnId),
     ListItem,
+    DictKey,
+    DictValue,
 }
 
 // points to a `Expr::NewList`.
@@ -56,6 +59,13 @@ fn ty_infer_stmt(stmt: &Stmt, fid: FnId, ast: &AST, nameres: &Nameres, actxt: &m
             let _i = ty_infer_expr(i, fid, ast, nameres, actxt);
             let v = ty_infer_expr(v, fid, ast, nameres, actxt);
             add(Location::ListItem, &v, actxt);
+        },
+        Stmt::DictStore(t, k, v) => {
+            let _t = ty_infer_expr(t, fid, ast, nameres, actxt);
+            let k = ty_infer_expr(k, fid, ast, nameres, actxt);
+            let v = ty_infer_expr(v, fid, ast, nameres, actxt);
+            add(Location::DictKey, &k, actxt);
+            add(Location::DictValue, &v, actxt);
         },
         Stmt::Push(l, v) => {
             let _l = ty_infer_expr(l, fid, ast, nameres, actxt);
@@ -105,11 +115,20 @@ pub fn ty_infer_expr(expr: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, actxt
         Expr::NewList => {
             TypeLattice { might_be_list: true, ..TypeLattice::bot() }
         },
+        Expr::NewDict => {
+            TypeLattice { might_be_dict: true, ..TypeLattice::bot() }
+        },
         Expr::IndexList(l, i) => {
             let _l = ty_infer_expr(l, fid, ast, nameres, actxt);
             let _i = ty_infer_expr(i, fid, ast, nameres, actxt);
 
             get(Location::ListItem, actxt)
+        },
+        Expr::IndexDict(t, k) => {
+            let _t = ty_infer_expr(t, fid, ast, nameres, actxt);
+            let _k = ty_infer_expr(k, fid, ast, nameres, actxt);
+
+            get(Location::DictValue, actxt)
         },
         Expr::FnCall(f, args) => {
             let f = ty_infer_expr(f, fid, ast, nameres, actxt);
@@ -156,6 +175,7 @@ pub fn ty_infer_expr(expr: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, actxt
             might_be_str: true,
             might_be_int: true,
             might_be_list: false,
+            might_be_dict: false,
             fn_options: HashSet::new(),
         },
     }
@@ -169,6 +189,7 @@ impl TypeLattice {
             might_be_str: false,
             might_be_int: false,
             might_be_list: false,
+            might_be_dict: false,
             fn_options: HashSet::new(),
         }
     }
@@ -180,6 +201,7 @@ impl TypeLattice {
             might_be_str: x.might_be_str || y.might_be_str,
             might_be_int: x.might_be_int || y.might_be_int,
             might_be_list: x.might_be_list || y.might_be_list,
+            might_be_dict: x.might_be_dict || y.might_be_dict,
             fn_options: x.fn_options.union(&y.fn_options).copied().collect(),
         }
     }

@@ -1,3 +1,5 @@
+// <preamble.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,16 +10,20 @@
 #define TAG_STR 2
 #define TAG_NIL 3
 #define TAG_LIST 4
+#define TAG_DICT 5
 
 #define int_to_value(x) ((Value) { .tag = TAG_INT, .payload.i = x })
 #define bool_to_value(x) ((Value) { .tag = TAG_BOOL, .payload.b = x })
 #define str_to_value(x) ((Value) { .tag = TAG_STR, .payload.s = x })
 #define nil_to_value() ((Value) { .tag = TAG_NIL })
 #define list_to_value(x) ((Value) { .tag = TAG_LIST, .payload.l = x })
+#define dict_to_value(x) ((Value) { .tag = TAG_DICT, .payload.d = x })
 #define tagged_fn_to_value(x, t) ((Value) { .tag = t, .payload.f = x })
 
 typedef struct Value Value;
 typedef struct list list;
+typedef struct dict dict;
+typedef struct entry entry;
 
 struct Value {
     char tag;
@@ -26,6 +32,7 @@ struct Value {
         bool b;
         char* s;
         list* l;
+        dict* d;
         void* f;
     } payload;
 };
@@ -109,6 +116,11 @@ list* value_to_list(Value v) {
     return v.payload.l;
 }
 
+dict* value_to_dict(Value v) {
+    check(v.tag == TAG_DICT, "value_to_dict failed!");
+    return v.payload.d;
+}
+
 void* value_to_fn_with_tag(Value v, int tag) {
     check(v.tag == tag, "value_to_fn_check_tag failed!");
     return v.payload.f;
@@ -125,3 +137,5 @@ bool is_equal(Value v1, Value v2) {
         default: return v1.payload.f == v2.payload.f; // the remaining tags are for functions.
     }
 }
+
+// </preamble.h>

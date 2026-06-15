@@ -1,5 +1,7 @@
+// <list.h>
+
 struct list {
-    T* elements;
+    $T* elements;
     int length;
     int capacity;
 };
@@ -17,21 +19,21 @@ int max(int x, int y) {
     return y;
 }
 
-void push_list(list* l, T v) {
+void push_list(list* l, $T v) {
     if (l->length == l->capacity) {
         l->capacity = max(2*l->capacity, 1);
-        l->elements = realloc(l->elements, sizeof(T) * l->capacity);
+        l->elements = realloc(l->elements, sizeof($T) * l->capacity);
     }
     l->elements[l->length] = v;
     l->length++;
 }
 
-void store_list(list* l, int i, T v) {
+void store_list(list* l, int i, $T v) {
     check(l->length > i, "store_list out of range!");
     l->elements[i] = v;
 }
 
-T index_list(list* l, int i) {
+$T index_list(list* l, int i) {
     check(l->length > i, "index_list out of range!");
     return l->elements[i];
 }
@@ -40,3 +42,5 @@ T index_list(list* l, int i) {
 int length(list* l) {
     return l->length;
 }
+
+// </list.h>

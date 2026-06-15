@@ -23,6 +23,7 @@ pub enum Stmt {
     Assign(Symbol, Expr),
     Push(/*list*/Expr, /*value*/Expr),
     ListStore(/*list*/Expr, /*int*/Expr, /*v*/Expr), // list[int] = v
+    DictStore(/*dict*/Expr, /*k*/Expr, /*v*/Expr), // dict[k] = v
     If(Expr, /*then*/ Body, /*else*/ Body),
     While(Expr, Body),
     Print(Expr),
@@ -32,7 +33,9 @@ pub enum Stmt {
 pub enum Expr {
     FnId(FnId),
     NewList,
+    NewDict,
     IndexList(/*list*/Box<Expr>, /*index*/Box<Expr>),
+    IndexDict(/*dict*/Box<Expr>, /*key*/Box<Expr>),
     BinOp(BinOpKind, Box<Expr>, Box<Expr>),
     Length(Box<Expr>),
     IntLit(i64),

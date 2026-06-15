@@ -18,6 +18,11 @@ fn visit_stmt(stmt: &Stmt, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnM
             visit_expr(i, f_expr, f_stmt);
             visit_expr(v, f_expr, f_stmt);
         },
+        DictStore(t, k, v) => {
+            visit_expr(t, f_expr, f_stmt);
+            visit_expr(k, f_expr, f_stmt);
+            visit_expr(v, f_expr, f_stmt);
+        },
         Push(l, v) => {
             visit_expr(l, f_expr, f_stmt);
             visit_expr(v, f_expr, f_stmt);
@@ -52,12 +57,17 @@ fn visit_expr(expr: &Expr, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnM
     match expr {
         FnId(_) => {},
         NewList => {},
+        NewDict => {},
         Length(l) => {
             visit_expr(l, f_expr, f_stmt);
         },
         IndexList(l, i) => {
             visit_expr(l, f_expr, f_stmt);
             visit_expr(i, f_expr, f_stmt);
+        },
+        IndexDict(t, k) => {
+            visit_expr(t, f_expr, f_stmt);
+            visit_expr(k, f_expr, f_stmt);
         },
         BinOp(_, e1, e2) => {
             visit_expr(e1, f_expr, f_stmt);
