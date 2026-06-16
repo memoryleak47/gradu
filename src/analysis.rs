@@ -162,9 +162,6 @@ pub fn ty_infer_expr(expr: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, actxt
                     TypeLattice { might_be_int: true, ..TypeLattice::bot() },
             }
         },
-        Expr::IntLit(_) => TypeLattice { might_be_int: true, ..TypeLattice::bot() },
-        Expr::StringLit(_) => TypeLattice { might_be_str: true, ..TypeLattice::bot() },
-        Expr::BoolLit(_) => TypeLattice { might_be_bool: true, ..TypeLattice::bot() },
         Expr::Var(v) => {
             let l = get_var_loc(fid, *v, nameres);
             get(l, actxt)
@@ -178,6 +175,11 @@ pub fn ty_infer_expr(expr: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, actxt
             might_be_dict: false,
             fn_options: HashSet::new(),
         },
+
+        Expr::IntLit(_) => TypeLattice { might_be_int: true, ..TypeLattice::bot() },
+        Expr::StringLit(_) => TypeLattice { might_be_str: true, ..TypeLattice::bot() },
+        Expr::BoolLit(_) => TypeLattice { might_be_bool: true, ..TypeLattice::bot() },
+        Expr::NilLit => TypeLattice { might_be_nil: true, ..TypeLattice::bot() },
     }
 }
 

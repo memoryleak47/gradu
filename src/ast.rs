@@ -38,12 +38,14 @@ pub enum Expr {
     IndexDict(/*dict*/Box<Expr>, /*key*/Box<Expr>),
     BinOp(BinOpKind, Box<Expr>, Box<Expr>),
     Length(Box<Expr>),
-    IntLit(i64),
-    StringLit(String),
-    BoolLit(bool),
     Var(Symbol),
     Input,
     FnCall(Box<Expr>, Vec<Expr>),
+
+    IntLit(i64),
+    StringLit(String),
+    BoolLit(bool),
+    NilLit,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

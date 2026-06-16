@@ -12,18 +12,12 @@
 #define TAG_LIST 4
 #define TAG_DICT 5
 
-#define int_to_value(x) ((Value) { .tag = TAG_INT, .payload.i = x })
-#define bool_to_value(x) ((Value) { .tag = TAG_BOOL, .payload.b = x })
-#define str_to_value(x) ((Value) { .tag = TAG_STR, .payload.s = x })
-#define nil_to_value() ((Value) { .tag = TAG_NIL })
-#define list_to_value(x) ((Value) { .tag = TAG_LIST, .payload.l = x })
-#define dict_to_value(x) ((Value) { .tag = TAG_DICT, .payload.d = x })
-#define tagged_fn_to_value(x, t) ((Value) { .tag = t, .payload.f = x })
-
 typedef struct Value Value;
 typedef struct list list;
 typedef struct dict dict;
 typedef struct entry entry;
+
+typedef struct {} nil;
 
 struct Value {
     char tag;
@@ -34,6 +28,7 @@ struct Value {
         list* l;
         dict* d;
         void* f;
+        nil n;
     } payload;
 };
 
@@ -42,12 +37,6 @@ void check(bool b, char* s) {
         printf("ERROR: %s\n", s);
         exit(1);
     }
-}
-
-Value fail(char* s) {
-    printf("%s\n", s);
-    exit(1);
-    return nil_to_value();
 }
 
 void print_value(Value v) {
@@ -96,6 +85,21 @@ Value input() {
     exit(EXIT_FAILURE);
 }
 
+////////////////
+// *_to_value //
+////////////////
+#define int_to_value(x) ((Value) { .tag = TAG_INT, .payload.i = x })
+#define bool_to_value(x) ((Value) { .tag = TAG_BOOL, .payload.b = x })
+#define str_to_value(x) ((Value) { .tag = TAG_STR, .payload.s = x })
+#define list_to_value(x) ((Value) { .tag = TAG_LIST, .payload.l = x })
+#define dict_to_value(x) ((Value) { .tag = TAG_DICT, .payload.d = x })
+#define tagged_fn_to_value(x, t) ((Value) { .tag = t, .payload.f = x })
+#define nil_to_value(x) ((Value) { .tag = TAG_NIL, .payload.n = x })
+
+////////////////
+// value_to_* //
+////////////////
+
 int value_to_int(Value v) {
     check(v.tag == TAG_INT, "value_to_int failed!");
     return v.payload.i;
@@ -126,6 +130,11 @@ void* value_to_fn_with_tag(Value v, int tag) {
     return v.payload.f;
 }
 
+nil value_to_nil(Value v) {
+    check(v.tag == TAG_NIL, "value_to_nil failed!");
+    return v.payload.n;
+}
+
 bool is_equal(Value v1, Value v2) {
     if (v1.tag != v2.tag) { return false; }
     switch (v1.tag) {
@@ -136,6 +145,11 @@ bool is_equal(Value v1, Value v2) {
         case TAG_LIST: return v1.payload.l == v2.payload.l; // ptr compare
         default: return v1.payload.f == v2.payload.f; // the remaining tags are for functions.
     }
+}
+
+Value fail(char* s) {
+    printf("%s\n", s);
+    exit(1);
 }
 
 // </preamble.h>

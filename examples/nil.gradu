@@ -1,0 +1,26 @@
+# nil.gradu
+
+nil_returner = fn() {};
+
+loc_printer = fn() {
+    print(loc);
+    loc = 42; # this assignment makes it local
+};
+
+glob_printer = fn() {
+    global glob;
+    print(glob);
+};
+
+# OUT: nil
+n = nil;
+print(n);
+
+# OUT: nil
+_ = loc_printer();
+
+# OUT: nil
+print(nil_returner());
+
+# OUT: nil
+_ = glob_printer();

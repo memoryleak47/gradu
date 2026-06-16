@@ -87,7 +87,7 @@ fn stringify_layout(ty: &LayoutType) -> String {
         LayoutType::List => "list*",
         LayoutType::Dict => "dict*",
         LayoutType::Fn(_) => "void*",
-        LayoutType::Nil => panic!(),
+        LayoutType::Nil => "nil",
     })
 }
 
@@ -279,6 +279,15 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -
                 BinOpKind::Ne => unreachable!(),
             }
         },
+        Expr::Var(v) => {
+            let l = get_var_loc2(fid, *v, ast, nameres, lctxt);
+            let ty = get_ty(l, lctxt);
+            (format!("{v}"), ty)
+        },
+        Expr::Input => {
+            (format!("input()"), LayoutType::Value)
+        },
+
         Expr::IntLit(i) => {
             (format!("{i}"), LayoutType::Int)
         },
@@ -292,13 +301,8 @@ fn comp_expr(e: &Expr, fid: FnId, ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -
                 (format!("false"), LayoutType::Bool)
             }
         },
-        Expr::Var(v) => {
-            let l = get_var_loc2(fid, *v, ast, nameres, lctxt);
-            let ty = get_ty(l, lctxt);
-            (format!("{v}"), ty)
-        },
-        Expr::Input => {
-            (format!("input()"), LayoutType::Value)
+        Expr::NilLit => {
+            (format!("((nil) {{}})"), LayoutType::Nil)
         },
     }
 }

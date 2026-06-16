@@ -73,9 +73,6 @@ fn visit_expr(expr: &Expr, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnM
             visit_expr(e1, f_expr, f_stmt);
             visit_expr(e2, f_expr, f_stmt);
         },
-        IntLit(_) => {},
-        StringLit(_) => {},
-        BoolLit(_) => {},
         Var(_) => {},
         Input => {},
         FnCall(f, es) => {
@@ -84,6 +81,11 @@ fn visit_expr(expr: &Expr, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnM
                 visit_expr(e, f_expr, f_stmt);
             }
         },
+
+        IntLit(_) => {},
+        StringLit(_) => {},
+        BoolLit(_) => {},
+        NilLit => {},
     }
 }
 
@@ -164,9 +166,6 @@ fn visit_expr_mut(expr: &mut Expr, f_expr: &mut impl FnMut(&mut Expr), f_stmt: &
             visit_expr_mut(e1, f_expr, f_stmt);
             visit_expr_mut(e2, f_expr, f_stmt);
         },
-        IntLit(_) => {},
-        StringLit(_) => {},
-        BoolLit(_) => {},
         Var(_) => {},
         Input => {},
         FnCall(f, es) => {
@@ -175,5 +174,10 @@ fn visit_expr_mut(expr: &mut Expr, f_expr: &mut impl FnMut(&mut Expr), f_stmt: &
                 visit_expr_mut(e, f_expr, f_stmt);
             }
         },
+
+        IntLit(_) => {},
+        StringLit(_) => {},
+        BoolLit(_) => {},
+        NilLit => {},
     }
 }

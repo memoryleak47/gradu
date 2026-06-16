@@ -70,11 +70,13 @@ Expr0: Expr = {
 
     "[" "]" => Expr::NewList,
     "{" "}" => Expr::NewDict,
+    "input" "(" ")" => Expr::Input,
+
     <n:Num> => Expr::IntLit(n),
     <s:Str> => Expr::StringLit(s),
-    "input" "(" ")" => Expr::Input,
     "true" => Expr::BoolLit(true),
     "false" => Expr::BoolLit(false),
+    "nil" => Expr::NilLit,
 
     "(" <Expr> ")" => <>,
 };
