@@ -1,5 +1,6 @@
 use crate::*;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum VarKind {
     Global,
     Local

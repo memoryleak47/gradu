@@ -48,6 +48,25 @@ fn compile_ast(ast: &AST, nameres: &Nameres, lctxt: &LCtxt) -> String {
     }
     compiled.push_str("\n");
 
+    // declare each fn
+    for fid in 0..ast.fns.len() {
+        let tag = lctxt.fn_to_tag[&fid];
+
+        let retty = get_ty(LayoutLocation::RetVal(tag), lctxt);
+        compiled.push_str(&stringify_layout(&retty));
+        compiled.push_str(&format!(" fn_{fid}("));
+        let arity = ast.fns[fid].args.len();
+        for i in 0..arity {
+            let t = get_ty(LayoutLocation::Arg(tag, i), lctxt);
+            compiled.push_str(&stringify_layout(&t));
+            if i != arity-1 {
+                compiled.push_str(", ");
+            }
+        }
+        compiled.push_str(");\n");
+    }
+    compiled.push_str("\n");
+
     // compile each fn
     for fid in 0..ast.fns.len() {
         compiled.push_str(&compile_fn(fid, ast, nameres, lctxt));
