@@ -14,6 +14,9 @@ pub use nameres::*;
 mod analysis;
 pub use analysis::*;
 
+mod optimize;
+pub use optimize::*;
+
 mod layout;
 pub use layout::*;
 
@@ -34,9 +37,14 @@ fn main() {
     let path = root.join("examples").join(filename + ".gradu");
     let s = std::fs::read_to_string(path).unwrap();
 
-    let ast = parse(&s);
-    let nameres = nameres(&ast);
-    let actxt = analyze(&ast, &nameres);
+    let mut ast = parse(&s);
+    let mut nameres = nameres(&ast);
+    let actxt = loop {
+        let actxt = analyze(&ast, &nameres);
+        if !optimize(&mut ast, &mut nameres, &actxt) {
+            break actxt
+        }
+    };
     let lctxt = layout(&ast, &nameres, &actxt);
     comp::comp(&ast, &nameres, &lctxt);
 }
