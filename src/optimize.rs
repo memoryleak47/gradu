@@ -5,7 +5,7 @@ pub fn optimize(ast: &mut AST, nameres: &mut Nameres, actxt: &ACtxt) -> bool {
     if inline_const_global_read(ast, nameres, actxt) { return true }
     if inline_const_local_read(ast, nameres, actxt) { return true }
     if remove_unreachable_stmts(ast) { return true }
-    if redundant_local_write_elimination(ast, nameres) { return true }
+    if redundant_write_elimination(ast, nameres) { return true }
     if if_inline(ast) { return true }
     false
 }
@@ -83,17 +83,23 @@ fn unreach(body: &mut Vec<Stmt>, changed: &mut bool) -> bool {
     false
 }
 
-fn redundant_local_write_elimination(ast: &mut AST, nameres: &Nameres) -> bool {
+fn redundant_write_elimination(ast: &mut AST, nameres: &Nameres) -> bool {
     let mut changed = false;
     for (fid, f) in ast.fns.iter_mut().enumerate() {
         let mut good_writes = HashSet::new();
         let state = State::new();
-        prop_body(&f.body, nameres, state, fid, &mut good_writes);
+        let state = prop_body(&f.body, nameres, state, fid, &mut good_writes);
+
+        // after our fn terminates, all our global writes might be read!
+        for (g, locs) in &state {
+            if let VarKind::Global = nameres.vars[fid][g] {
+                good_writes.extend(locs);
+            }
+        }
 
         visit_body_mut(&mut f.body, &mut |_|{}, &mut |stmt: &mut Stmt| {
             let stmt_ref = stmt as *const Stmt;
-            let Stmt::Assign(v, e) = stmt else { return };
-            let VarKind::Local = nameres.vars[fid][v] else { return };
+            let Stmt::Assign(_, e) = stmt else { return };
             if good_writes.contains(&stmt_ref) { return }
             if !side_effect_free(e) { return }
 
@@ -113,8 +119,16 @@ fn prop_body(body: &Body, nameres: &Nameres, mut state: State, fid: FnId, good_w
     for stmt in body {
         let mut handle_expr = |expr: &Expr| {
             visit_expr(expr, &mut |expr| {
+                // if another function is called, all our global writes might have been read!
+                if let Expr::FnCall(_, _) = expr {
+                    for (g, locs) in &state {
+                        if let VarKind::Global = nameres.vars[fid][g] {
+                            good_writes.extend(locs);
+                        }
+                    }
+                }
+
                 let Expr::Var(v) = expr else { return };
-                let VarKind::Local = nameres.vars[fid][v] else { return };
                 let Some(x) = state.get(v) else { return };
                 good_writes.extend(x);
             }, &mut |_|{});
