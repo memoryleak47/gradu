@@ -4,6 +4,7 @@ use crate::*;
 pub fn optimize(ast: &mut AST, nameres: &mut Nameres, actxt: &ACtxt) -> bool {
     if inline_const_global_read(ast, nameres, actxt) { return true }
     if inline_const_local_read(ast, nameres, actxt) { return true }
+    if remove_unreachable_stmts(ast) { return true }
     false
 }
 
@@ -48,4 +49,34 @@ fn as_concrete_expr(mut lat: TypeLattice) -> Option<Expr> {
     if fns.len() != 1 { return None }
     let f = *fns.iter().next().unwrap();
     Some(Expr::FnId(f))
+}
+
+
+fn remove_unreachable_stmts(ast: &mut AST) -> bool {
+    let mut changed = false;
+    for f in ast.fns.iter_mut() {
+        unreach(&mut f.body, &mut changed);
+    }
+    changed
+}
+
+// returns true if it certainly returned.
+fn unreach(body: &mut Vec<Stmt>, changed: &mut bool) -> bool {
+    for i in 0..body.len() {
+        let stop = match &mut body[i] {
+            Stmt::Return(_) => true,
+            Stmt::If(_, then_, else_) => unreach(then_, changed) && unreach(else_, changed),
+            Stmt::While(_, body_) => {
+                unreach(body_, changed);
+                false
+            },
+            _ => false,
+        };
+        if stop {
+            if body.len() != i+1 { *changed = true; }
+            body.truncate(i+1);
+            return true;
+        }
+    }
+    false
 }
