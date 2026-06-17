@@ -161,7 +161,7 @@ fn type_cast_to(e: String, old: LayoutType, new: LayoutType) -> String {
             LayoutType::Str => format!("value_to_str({e})"),
             LayoutType::List => format!("value_to_list({e})"),
             LayoutType::Dict => format!("value_to_dict({e})"),
-            LayoutType::Nil => todo!(),
+            LayoutType::Nil => format!("value_to_nil({e})"),
             LayoutType::Fn(tag) => format!("value_to_fn_with_tag({e}, {tag})"),
             LayoutType::Value => unreachable!(),
         }

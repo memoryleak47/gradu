@@ -1,11 +1,12 @@
 use crate::*;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum VarKind {
     Global,
     Local
 }
 
+#[derive(Debug)]
 pub struct Nameres {
     pub vars: Vec<HashMap<Symbol, VarKind>>, // indexed by FnId and Varname
     pub globals: HashSet<Symbol>,
@@ -71,6 +72,12 @@ pub fn nameres(ast: &AST) -> Nameres {
         }
 
         vars.push(vmap);
+    }
+
+    // every global has to be part of the main_fn.
+    let main_vars = &mut vars[ast.main_fn];
+    for &g in &globals {
+        main_vars.insert(g, VarKind::Global);
     }
 
     Nameres {
