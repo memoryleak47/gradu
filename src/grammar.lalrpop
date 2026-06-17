@@ -6,11 +6,7 @@ grammar(g_ast: &mut AST);
 pub AST: () = {
     <body:Body> => {
         let i = g_ast.fns.len();
-
-        let mut body = body;
-        body.push(Stmt::Return(Expr::NilLit));
         g_ast.fns.push(FnDef { args: Vec::new(), body });
-
         g_ast.main_fn = i;
     },
 };
@@ -68,11 +64,7 @@ Expr0: Expr = {
 
     "fn" "(" <args:Args> ")" "{" <body:Body> "}" => {
         let i = g_ast.fns.len();
-
-        let mut body = body;
-        body.push(Stmt::Return(Expr::NilLit));
         g_ast.fns.push(FnDef { args, body });
-
         Expr::FnId(i)
     },
 

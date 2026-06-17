@@ -4,12 +4,14 @@ pub use ast::*;
 mod parse;
 pub use parse::*;
 
-
 mod visit;
 pub use visit::*;
 
 mod nameres;
 pub use nameres::*;
+
+mod nil_init;
+pub use nil_init::*;
 
 mod analysis;
 pub use analysis::*;
@@ -39,6 +41,7 @@ fn main() {
 
     let mut ast = parse(&s);
     let mut nameres = nameres(&ast);
+    nil_init(&mut ast, &nameres);
     let actxt = loop {
         let actxt = analyze(&ast, &nameres);
         if !optimize(&mut ast, &mut nameres, &actxt) {
