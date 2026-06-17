@@ -6,7 +6,7 @@ pub fn visit_body(body: &Body, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl
     }
 }
 
-fn visit_stmt(stmt: &Stmt, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnMut(&Stmt)) {
+pub fn visit_stmt(stmt: &Stmt, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnMut(&Stmt)) {
     use Stmt::*;
 
     f_stmt(stmt);
@@ -49,7 +49,7 @@ fn visit_stmt(stmt: &Stmt, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnM
     }
 }
 
-fn visit_expr(expr: &Expr, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnMut(&Stmt)) {
+pub fn visit_expr(expr: &Expr, f_expr: &mut impl FnMut(&Expr), f_stmt: &mut impl FnMut(&Stmt)) {
     use Expr::*;
 
     f_expr(expr);
