@@ -1,7 +1,7 @@
 # mean3.gradu
 
 x = 2;
-if false {
+if 1==0 {
     _ = x();
     _ = x(x, x);
 } else {

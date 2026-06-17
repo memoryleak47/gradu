@@ -6,6 +6,7 @@ pub fn optimize(ast: &mut AST, nameres: &mut Nameres, actxt: &ACtxt) -> bool {
     if inline_const_local_read(ast, nameres, actxt) { return true }
     if remove_unreachable_stmts(ast) { return true }
     if redundant_local_write_elimination(ast, nameres) { return true }
+    if if_inline(ast) { return true }
     false
 }
 
@@ -165,5 +166,40 @@ fn side_effect_free(e: &Expr) -> bool {
         Input | FnCall(_, _) => false,
         IndexList(a, b) | IndexDict(a, b) | BinOp(_, a, b) => side_effect_free(a) && side_effect_free(b),
         Length(a) => side_effect_free(a),
+    }
+}
+
+fn if_inline(ast: &mut AST) -> bool {
+    let mut changed = false;
+    for f in ast.fns.iter_mut() {
+        visit_body_mut2(&mut f.body, &mut |body| {
+            for i in 0..body.len() {
+                let Stmt::If(Expr::BoolLit(b), then_, else_) = &body[i] else { continue };
+                let inner = if *b { then_ } else { else_ };
+                body.splice(i..i+1, inner.clone());
+
+                changed = true;
+                return;
+            }
+        });
+    }
+
+    changed
+}
+
+fn visit_body_mut2(body: &mut Body, f: &mut impl FnMut(&mut Body)) {
+    f(body);
+
+    for stmt in body {
+        match stmt {
+            Stmt::If(_, then_, else_) => {
+                visit_body_mut2(then_, f);
+                visit_body_mut2(else_, f);
+            },
+            Stmt::While(_, b) => {
+                visit_body_mut2(b, f);
+            },
+            _ => {},
+        }
     }
 }
