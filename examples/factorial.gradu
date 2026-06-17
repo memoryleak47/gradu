@@ -1,8 +1,6 @@
 # factorial
 
 factorial = fn(x) {
-    global factorial;
-
     if x == 0 {
         return 1;
     } else {
