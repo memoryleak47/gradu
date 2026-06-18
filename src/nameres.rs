@@ -16,14 +16,7 @@ pub fn nameres(ast: &AST) -> Nameres {
     let mut vars = Vec::new();
     let mut globals = HashSet::new();
 
-    let mut fnids: Vec<_> = (0..ast.fns.len()).collect();
-
-    // so "main" is at the last position.
-    let main_idx = fnids.iter().position(|x| *x == ast.main_fn).unwrap();
-    fnids.swap_remove(main_idx);
-    fnids.push(ast.main_fn);
-
-    for &fid in &fnids {
+    for fid in 0..ast.fns.len() {
         let f = &ast.fns[fid];
         let mut read: HashSet<Symbol> = HashSet::new();
         let mut assigned: HashSet<Symbol> = HashSet::new();
@@ -49,11 +42,7 @@ pub fn nameres(ast: &AST) -> Nameres {
         for x in &(&(&global | &read) | &assigned) | &args {
             let kind =
                 if fid == ast.main_fn {
-                    if globals.contains(&x) { // if some other fn accesses it, then we have to make it global.
-                        VarKind::Global
-                    } else {
-                        VarKind::Local
-                    }
+                    VarKind::Global
                 } else {
                     if args.contains(&x) {
                         VarKind::Local

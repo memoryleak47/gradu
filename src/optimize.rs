@@ -8,6 +8,7 @@ pub fn optimize(ast: &mut AST, nameres: &mut Nameres, actxt: &ACtxt) -> bool {
     if redundant_write_elimination(ast, nameres) { return true }
     if if_inline(ast) { return true }
     if remove_unused_vars(ast, nameres) { return true }
+    if global_to_local(ast, nameres) { return true }
     false
 }
 
@@ -258,4 +259,26 @@ fn used_vars(body: &Body) -> HashSet<Symbol> {
         vars2.insert(*v);
     });
     vars1.union(&vars2).copied().collect()
+}
+
+// If any global is only used in main, make it local
+fn global_to_local(ast: &mut AST, nameres: &mut Nameres) -> bool {
+    let mut changed = false;
+
+    'outer: for g in nameres.globals.clone() {
+        for fid in 0..ast.fns.len() {
+            if ast.main_fn == fid {
+                assert_eq!(nameres.vars[fid][&g], VarKind::Global);
+            } else {
+                if let Some(VarKind::Global) = nameres.vars[fid].get(&g) { continue 'outer; }
+            }
+        }
+
+        // if we reached this point, no other fn except for main_fn actually uses g.
+        // let's make it local to main
+        nameres.vars[ast.main_fn].insert(g, VarKind::Local);
+        nameres.globals.remove(&g);
+        changed = true;
+    }
+    changed
 }
