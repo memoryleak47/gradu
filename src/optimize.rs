@@ -7,6 +7,7 @@ pub fn optimize(ast: &mut AST, nameres: &mut Nameres, actxt: &ACtxt) -> bool {
     if remove_unreachable_stmts(ast) { return true }
     if redundant_write_elimination(ast, nameres) { return true }
     if if_inline(ast) { return true }
+    if remove_unused_vars(ast, nameres) { return true }
     false
 }
 
@@ -216,4 +217,45 @@ fn visit_body_mut2(body: &mut Body, f: &mut impl FnMut(&mut Body)) {
             _ => {},
         }
     }
+}
+
+fn remove_unused_vars(ast: &mut AST, nameres: &mut Nameres) -> bool {
+    let mut changed = false;
+
+    let mut used_globals = HashSet::new();
+
+    // locals:
+    for (fid, f) in ast.fns.iter_mut().enumerate() {
+        let vars = used_vars(&f.body);
+        for (v, kind) in nameres.vars[fid].clone() {
+            if vars.contains(&v) {
+                if let VarKind::Global = kind {
+                    used_globals.insert(v);
+                }
+            } else {
+                nameres.vars[fid].remove(&v);
+                changed = true;
+            }
+        }
+    }
+
+    if nameres.globals != used_globals {
+        changed = true;
+        nameres.globals = used_globals;
+    }
+
+    changed
+}
+
+fn used_vars(body: &Body) -> HashSet<Symbol> {
+    let mut vars1 = HashSet::new();
+    let mut vars2 = HashSet::new();
+    visit_body(body, &mut |expr| {
+        let Expr::Var(v) = expr else { return };
+        vars1.insert(*v);
+    }, &mut |stmt| {
+        let Stmt::Assign(v, _) = stmt else { return };
+        vars2.insert(*v);
+    });
+    vars1.union(&vars2).copied().collect()
 }
