@@ -1,5 +1,5 @@
-gradu - towards a gradually typed programming language
-======================================================
+gradu
+=====
 
-- We want optional type annotations which affect performance & memory layouting decisions
-- I probably want to just take "lu" as a base language and then add type annotations to it.
+The next iteration of my lua2llvm / ni - type projects.
+Goal is to have a dynamic language as an input, and to produce reasonably fast C code from it.
