@@ -2,13 +2,13 @@
 
 mk_point = fn(x, y) {
     point = {};
-    point[["x"]] = x;
-    point[["y"]] = y;
+    point.x = x;
+    point.y = y;
 
-    point[["add"]] = fn(self, other) {
+    point.add = fn(self, other) {
         return mk_point(
-            self[["x"]] + other[["x"]],
-            self[["y"]] + other[["y"]]
+            self.x + other.x,
+            self.y + other.y
         );
     };
 
@@ -20,6 +20,6 @@ point2 = mk_point(35, 24);
 res = point1:add(point2);
 
 # OUT: 42
-print(res[["x"]]);
+print(res.x);
 # OUT: 42
-print(res[["y"]]);
+print(res.y);

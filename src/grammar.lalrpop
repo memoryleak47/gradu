@@ -84,6 +84,7 @@ Expr0: Expr = {
 LValue: LValue = {
     <l:Expr0> "[" <i:Expr> "]" => LValue::IndexList(l, i),
     <t:Expr0> "[[" <k:Expr> "]]" => LValue::IndexDict(t, k),
+    <t:Expr0> "." <i:Ident> => LValue::IndexDict(t, Expr::StringLit(i.to_string())),
     <i:Ident> => LValue::Var(i),
 };
 
