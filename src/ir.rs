@@ -42,6 +42,8 @@ enum Stmt {
 enum Expr {
     FnCall(ValueId, ValueId), // should this stop the block, like a terminator? no?
 
+    LoadGlobal(GlobalId),
+
     Fn(FnId),
     NewList,
     NewDict,
