@@ -3,18 +3,42 @@ use crate::*;
 use crate::ir::{Terminator, BlkDef, FnDef, ValueId, Ty};
 
 fn lower_expr(e: &ast::Expr, out: &mut BlkDef) -> ValueId {
-    let fresh = fresh();
-
     let e = match e {
-        ast::Expr::StringLit(x) => ir::Expr::StringLit(x.clone()),
-        ast::Expr::IntLit(x) => ir::Expr::IntLit(*x),
-        ast::Expr::NilLit => ir::Expr::NilLit,
-        ast::Expr::BoolLit(x) => ir::Expr::BoolLit(*x),
-        _ => todo!(),
+        ast::Expr::StringLit(x) => {
+            let a = mk_expr(ir::Expr::StringLit(x.clone()), out);
+            ir::Expr::TToValue(a, Ty::String)
+        },
+        ast::Expr::BinOp(kind, l, r) => {
+            let l = lower_expr(l, out);
+            let r = lower_expr(r, out);
+            match kind {
+                ast::BinOpKind::Plus => {
+                    let l = mk_expr(ir::Expr::ValueToT(l, Ty::Int), out);
+                    let r = mk_expr(ir::Expr::ValueToT(r, Ty::Int), out);
+                    let o = mk_expr(ir::Expr::BinOp(ir::BinOpKind::Plus, l, r), out);
+                    ir::Expr::TToValue(o, Ty::Int)
+                },
+                x => todo!("{x:?}"),
+            }
+        },
+        x => todo!("{x:?}"),
     };
 
+    mk_expr(e, out)
+}
+
+fn ty_of(e: &ir::Expr) -> Ty {
+    match e {
+        ir::Expr::StringLit(_) => Ty::String,
+        ir::Expr::TToValue(_, _) => Ty::Value,
+        x => todo!("{x:?}")
+    }
+}
+
+fn mk_expr(e: ir::Expr, out: &mut BlkDef) -> ValueId {
+    let fresh = fresh();
+    out.types.insert(fresh, ty_of(&e));
     out.stmts.push(ir::Stmt::Compute(fresh, e));
-    out.types.insert(fresh, Ty::Value); // everything is value-typed on start.
     fresh
 }
 

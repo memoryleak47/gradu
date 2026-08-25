@@ -65,6 +65,9 @@ pub enum Expr {
     StringLit(String),
     BoolLit(bool),
     NilLit,
+
+    TToValue(ValueId, /*in type T*/ Ty), // wraps something to a Value. input type can be obtained from said ValueId.
+    ValueToT(ValueId, /*out type T*/ Ty),
 }
 
 #[derive(Debug, Clone)]

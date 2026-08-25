@@ -25,7 +25,8 @@ pub fn comp(ir: &IR) {
 
 fn comp_expr(e: &Expr, ir: &IR, out: &mut String) {
     match e {
-        Expr::StringLit(x) => write!(out, "str_to_value(\"{x}\")").unwrap(),
+        Expr::StringLit(x) => write!(out, "\"{x}\"").unwrap(),
+        Expr::TToValue(x, Ty::String) => write!(out, "str_to_value(v_{x})").unwrap(),
         x => todo!("{x:?}"),
     }
 }
@@ -33,7 +34,8 @@ fn comp_expr(e: &Expr, ir: &IR, out: &mut String) {
 fn ty_str(x: &Ty) -> &str {
     match x {
         Ty::Value => "Value",
-        _ => todo!(),
+        Ty::String => "char*",
+        x => todo!("{x:?}"),
     }
 }
 
