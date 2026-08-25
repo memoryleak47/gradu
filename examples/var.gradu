@@ -1,0 +1,6 @@
+# var.gradu
+
+x = 42;
+
+# OUT: 42
+print(x);

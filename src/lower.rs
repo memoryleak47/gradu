@@ -2,7 +2,7 @@ use crate::*;
 
 use crate::ir::{Terminator, BlkDef, FnDef, ValueId, Ty, BlkId};
 
-fn lower_expr(e: &ast::Expr, out: &mut BlkDef) -> ValueId {
+fn lower_expr(e: &ast::Expr, out: &mut BlkDef, varmap: &HashMap<Symbol, ValueId>) -> ValueId {
     let e = match e {
         ast::Expr::StringLit(x) => {
             let a = mk_expr(ir::Expr::StringLit(x.clone()), out);
@@ -17,8 +17,8 @@ fn lower_expr(e: &ast::Expr, out: &mut BlkDef) -> ValueId {
             ir::Expr::TToValue(a, Ty::Bool)
         },
         ast::Expr::BinOp(kind, l, r) => {
-            let l = lower_expr(l, out);
-            let r = lower_expr(r, out);
+            let l = lower_expr(l, out, varmap);
+            let r = lower_expr(r, out, varmap);
             match kind {
                 ast::BinOpKind::Plus => {
                     let l = mk_expr(ir::Expr::ValueToT(l, Ty::Int), out);
@@ -29,6 +29,7 @@ fn lower_expr(e: &ast::Expr, out: &mut BlkDef) -> ValueId {
                 x => todo!("{x:?}"),
             }
         },
+        ast::Expr::Var(v) => return varmap[v],
         x => todo!("{x:?}"),
     };
 
@@ -54,7 +55,7 @@ fn mk_expr(e: ir::Expr, out: &mut BlkDef) -> ValueId {
     fresh
 }
 
-fn lower_blk(stmts: &[ast::Stmt], out: &mut FnDef, post: BlkId) -> BlkId {
+fn lower_blk(stmts: &[ast::Stmt], out: &mut FnDef, post: BlkId, varmap: &mut HashMap<Symbol, ValueId>) -> BlkId {
     let new = fresh();
     let mut new_mut = new;
 
@@ -66,21 +67,21 @@ fn lower_blk(stmts: &[ast::Stmt], out: &mut FnDef, post: BlkId) -> BlkId {
     });
 
     for st in stmts {
-        lower_stmt(st, out, &mut new_mut);
+        lower_stmt(st, out, &mut new_mut, varmap);
     }
     out.blocks.get_mut(&new_mut).unwrap().terminator = Terminator::Goto((post, Box::new([])));
 
     new
 }
 
-fn lower_stmt(stmt: &ast::Stmt, out: &mut FnDef, bid: &mut BlkId) {
+fn lower_stmt(stmt: &ast::Stmt, out: &mut FnDef, bid: &mut BlkId, varmap: &mut HashMap<Symbol, ValueId>) {
     match stmt {
         ast::Stmt::Print(x) => {
-            let v = lower_expr(x, out.blocks.get_mut(bid).unwrap());
+            let v = lower_expr(x, out.blocks.get_mut(bid).unwrap(), varmap);
             out.blocks.get_mut(bid).unwrap().stmts.push(ir::Stmt::Print(v));
         },
         ast::Stmt::If(cond, then_, else_) => {
-            let cond = lower_expr(cond, out.blocks.get_mut(bid).unwrap());
+            let cond = lower_expr(cond, out.blocks.get_mut(bid).unwrap(), varmap);
             let cond = mk_expr(ir::Expr::ValueToT(cond, Ty::Bool), out.blocks.get_mut(bid).unwrap());
 
             let post = fresh();
@@ -91,14 +92,18 @@ fn lower_stmt(stmt: &ast::Stmt, out: &mut FnDef, bid: &mut BlkId) {
                 types: HashMap::new(),
             });
 
-            let then_ = lower_blk(then_, out, post);
-            let else_ = lower_blk(else_, out, post);
+            let then_ = lower_blk(then_, out, post, varmap);
+            let else_ = lower_blk(else_, out, post, varmap);
 
             out.blocks.get_mut(bid).unwrap().terminator = Terminator::IfGoto(cond, (then_, Box::new([])), (else_, Box::new([])));
 
             *bid = post;
         },
-        _ => todo!(),
+        ast::Stmt::Assign(var, val) => {
+            let val = lower_expr(val, out.blocks.get_mut(bid).unwrap(), varmap);
+            varmap.insert(*var, val);
+        },
+        x => todo!("{x:?}"),
     }
 }
 
@@ -120,8 +125,9 @@ pub fn lower(ast: &AST) -> IR {
     };
 
     let mut current = bname;
+    let mut varmap = HashMap::new();
     for st in ast {
-        lower_stmt(st, &mut fdef, &mut current);
+        lower_stmt(st, &mut fdef, &mut current, &mut varmap);
     }
     let mut fns = HashMap::new();
     let fname = fresh();
