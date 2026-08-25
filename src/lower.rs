@@ -28,7 +28,7 @@ fn lower_stmt(stmt: &ast::Stmt, out: &mut BlkDef) {
     }
 }
 
-pub fn lower(ast: AST) -> IR {
+pub fn lower(ast: &AST) -> IR {
     let def = {
         let mut blocks = HashMap::new();
 
@@ -39,7 +39,7 @@ pub fn lower(ast: AST) -> IR {
             types: HashMap::new(),
         };
 
-        for st in &ast {
+        for st in ast {
             lower_stmt(st, &mut bdef);
         }
 

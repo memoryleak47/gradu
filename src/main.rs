@@ -13,6 +13,9 @@ pub use lower::*;
 mod fresh;
 pub use fresh::*;
 
+mod comp;
+pub use comp::*;
+
 extern crate symbol_table;
 pub type Symbol = symbol_table::GlobalSymbol;
 
@@ -28,6 +31,6 @@ fn main() {
     let s = std::fs::read_to_string(path).unwrap();
 
     let ast = parse(&s);
-    let ir = lower(ast);
-    dbg!(ir);
+    let ir = lower(&ast);
+    comp(&ir);
 }
