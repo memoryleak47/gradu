@@ -7,6 +7,9 @@ fn lower_expr(e: &ast::Expr, out: &mut BlkDef) -> ValueId {
 
     let e = match e {
         ast::Expr::StringLit(x) => ir::Expr::StringLit(x.clone()),
+        ast::Expr::IntLit(x) => ir::Expr::IntLit(*x),
+        ast::Expr::NilLit => ir::Expr::NilLit,
+        ast::Expr::BoolLit(x) => ir::Expr::BoolLit(*x),
         _ => todo!(),
     };
 
