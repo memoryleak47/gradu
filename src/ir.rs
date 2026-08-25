@@ -42,7 +42,7 @@ enum Stmt {
 }
 
 enum Expr {
-    FnCall(ValueId, Box<[ValueId]>), // should this stop the block, like a terminator? no?
+    FnCall(ValueId, Box<[ValueId]>), // in minirust this was a terminator, but not in LLVM, so I'll leave it as an Expr.
 
     LoadGlobal(GlobalId),
 
