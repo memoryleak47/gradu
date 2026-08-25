@@ -2,6 +2,24 @@ use crate::*;
 
 use crate::ir::{Terminator, BlkDef, FnDef, ValueId, Ty, BlkId};
 
+fn lower_binop(kind: ast::BinOpKind, l: ValueId, r: ValueId, out: &mut BlkDef) -> ir::Expr {
+    match kind {
+        ast::BinOpKind::Plus => {
+            let l = mk_expr(ir::Expr::ValueToT(l, Ty::Int), out);
+            let r = mk_expr(ir::Expr::ValueToT(r, Ty::Int), out);
+            let o = mk_expr(ir::Expr::BinOp(ir::BinOpKind::Plus, l, r), out);
+            ir::Expr::TToValue(o, Ty::Int)
+        },
+        ast::BinOpKind::Gt => {
+            let l = mk_expr(ir::Expr::ValueToT(l, Ty::Int), out);
+            let r = mk_expr(ir::Expr::ValueToT(r, Ty::Int), out);
+            let o = mk_expr(ir::Expr::BinOp(ir::BinOpKind::Gt, l, r), out);
+            ir::Expr::TToValue(o, Ty::Bool)
+        },
+        x => todo!("{x:?}"),
+    }
+}
+
 fn lower_expr(e: &ast::Expr, out: &mut BlkDef, varmap: &HashMap<Symbol, ValueId>) -> ValueId {
     let e = match e {
         ast::Expr::StringLit(x) => {
@@ -19,15 +37,7 @@ fn lower_expr(e: &ast::Expr, out: &mut BlkDef, varmap: &HashMap<Symbol, ValueId>
         ast::Expr::BinOp(kind, l, r) => {
             let l = lower_expr(l, out, varmap);
             let r = lower_expr(r, out, varmap);
-            match kind {
-                ast::BinOpKind::Plus => {
-                    let l = mk_expr(ir::Expr::ValueToT(l, Ty::Int), out);
-                    let r = mk_expr(ir::Expr::ValueToT(r, Ty::Int), out);
-                    let o = mk_expr(ir::Expr::BinOp(ir::BinOpKind::Plus, l, r), out);
-                    ir::Expr::TToValue(o, Ty::Int)
-                },
-                x => todo!("{x:?}"),
-            }
+            lower_binop(*kind, l, r, out)
         },
         ast::Expr::Var(v) => return varmap[v],
         x => todo!("{x:?}"),
@@ -37,13 +47,15 @@ fn lower_expr(e: &ast::Expr, out: &mut BlkDef, varmap: &HashMap<Symbol, ValueId>
 }
 
 fn ty_of(e: &ir::Expr) -> Ty {
+    use ir::BinOpKind::*;
     match e {
         ir::Expr::StringLit(_) => Ty::String,
         ir::Expr::IntLit(_) => Ty::Int,
         ir::Expr::BoolLit(_) => Ty::Bool,
         ir::Expr::TToValue(_, _) => Ty::Value,
         ir::Expr::ValueToT(_, o) => *o,
-        ir::Expr::BinOp(ir::BinOpKind::Plus, _, _) => Ty::Int,
+        ir::Expr::BinOp(Plus|Minus, _, _) => Ty::Int,
+        ir::Expr::BinOp(Lt|Gt|Ne, _, _) => Ty::Bool,
         x => todo!("{x:?}")
     }
 }
