@@ -1,0 +1,9 @@
+# loop.gradu
+
+i = 0;
+while i < 10 {
+    i = i+3;
+}
+
+# OUT: 12
+print(i);
