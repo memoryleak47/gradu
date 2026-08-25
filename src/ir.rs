@@ -84,6 +84,7 @@ pub enum Ty {
     Int,
     String,
     Fn,
+    Bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

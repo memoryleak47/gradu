@@ -1,0 +1,14 @@
+# if
+
+# OUT: pre
+print("pre");
+
+if true {
+    # OUT: true is true!
+    print("true is true!");
+} else {
+    print("false is true!");
+}
+
+# OUT: post
+print("post");

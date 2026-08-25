@@ -27,12 +27,16 @@ fn comp_expr(e: &Expr, ir: &IR, out: &mut String) {
     match e {
         Expr::StringLit(x) => write!(out, "\"{x}\"").unwrap(),
         Expr::IntLit(x) => write!(out, "{x}").unwrap(),
+        Expr::BoolLit(b) => write!(out, "{b}").unwrap(),
         Expr::BinOp(BinOpKind::Plus, x, y) => write!(out, "v_{x} + v_{y}").unwrap(),
 
         Expr::TToValue(x, Ty::String) => write!(out, "str_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Int) => write!(out, "int_to_value(v_{x})").unwrap(),
+        Expr::TToValue(x, Ty::Bool) => write!(out, "bool_to_value(v_{x})").unwrap(),
 
+        Expr::ValueToT(x, Ty::String) => write!(out, "value_to_str(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Int) => write!(out, "value_to_int(v_{x})").unwrap(),
+        Expr::ValueToT(x, Ty::Bool) => write!(out, "value_to_bool(v_{x})").unwrap(),
         x => todo!("{x:?}"),
     }
 }
@@ -42,6 +46,7 @@ fn ty_str(x: &Ty) -> &str {
         Ty::Value => "Value",
         Ty::String => "char*",
         Ty::Int => "int",
+        Ty::Bool => "bool",
         x => todo!("{x:?}"),
     }
 }
@@ -62,10 +67,10 @@ fn comp_stmt(stmt: &Stmt, ir: &IR, out: &mut String) {
 
 fn comp_terminator(terminator: &Terminator, ir: &IR, out: &mut String) {
     match terminator {
-        Terminator::Exit => {
-            writeln!(out, "    exit(0);").unwrap();
-        },
-        _ => todo!(),
+        Terminator::Exit => writeln!(out, "    exit(0);").unwrap(),
+        Terminator::Goto(x) => writeln!(out, "    goto bb_{};", x.0).unwrap(),
+        Terminator::IfGoto(cond, then_, else_) => writeln!(out, "    if (v_{cond}) goto bb_{}; else goto bb_{};", then_.0, else_.0).unwrap(),
+        x => todo!("{x:?}"),
     }
 }
 
