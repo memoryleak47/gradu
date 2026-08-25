@@ -2,19 +2,7 @@ use crate::*;
 
 pub type FnId = usize;
 
-#[derive(Debug)]
-pub struct AST {
-    pub fns: Vec<FnDef>, // indexed by FnId
-    pub main_fn: FnId,
-}
-
-#[derive(Debug)]
-pub struct FnDef {
-    pub args: Vec<Symbol>,
-    pub body: Body,
-}
-
-pub type Body = Vec<Stmt>;
+pub type AST = Box<[Stmt]>;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Stmt {
@@ -24,14 +12,14 @@ pub enum Stmt {
     Push(/*list*/Expr, /*value*/Expr),
     ListStore(/*list*/Expr, /*int*/Expr, /*v*/Expr), // list[int] = v
     DictStore(/*dict*/Expr, /*k*/Expr, /*v*/Expr), // dict[k] = v
-    If(Expr, /*then*/ Body, /*else*/ Body),
-    While(Expr, Body),
+    If(Expr, /*then*/ AST, /*else*/ AST),
+    While(Expr, AST),
     Print(Expr),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expr {
-    FnId(FnId),
+    Fn(/*args*/ Vec<Symbol>, /*body*/ AST),
     NewList,
     NewDict,
     IndexList(/*list*/Box<Expr>, /*index*/Box<Expr>),

@@ -1,18 +1,10 @@
 use std::str::FromStr;
 use crate::*;
 
-grammar(g_ast: &mut AST);
+grammar;
 
-pub AST: () = {
-    <body:Body> => {
-        let i = g_ast.fns.len();
-        g_ast.fns.push(FnDef { args: Vec::new(), body });
-        g_ast.main_fn = i;
-    },
-};
-
-Body: Body = {
-    <b:Stmt*> => b,
+pub AST: AST = {
+    <b:Stmt*> => b.into(),
 };
 
 Args: Vec<Symbol> = Comma<Ident>;
@@ -62,10 +54,8 @@ Expr0: Expr = {
         }
     },
 
-    "fn" "(" <args:Args> ")" "{" <body:Body> "}" => {
-        let i = g_ast.fns.len();
-        g_ast.fns.push(FnDef { args, body });
-        Expr::FnId(i)
+    "fn" "(" <args:Args> ")" "{" <body:AST> "}" => {
+        Expr::Fn(args, body)
     },
 
     "[" "]" => Expr::NewList,
@@ -99,9 +89,9 @@ Stmt: Stmt = {
         }
     },
     "print" "(" <e:Expr> ")" ";" => Stmt::Print(e),
-    "if" <c: Expr> "{" <then_:Body> "}" "else" "{" <else_:Body> "}" => Stmt::If(c, then_, else_),
-    "if" <c: Expr> "{" <then_:Body> "}" => Stmt::If(c, then_, Vec::new()),
-    "while" <c:Expr> "{" <body:Body> "}" => Stmt::While(c, body),
+    "if" <c: Expr> "{" <then_:AST> "}" "else" "{" <else_:AST> "}" => Stmt::If(c, then_, else_),
+    "if" <c: Expr> "{" <then_:AST> "}" => Stmt::If(c, then_, Box::new([])),
+    "while" <c:Expr> "{" <body:AST> "}" => Stmt::While(c, body),
     "return" <e:Expr> ";" => Stmt::Return(e),
 };
 

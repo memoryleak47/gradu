@@ -6,12 +6,8 @@ lalrpop_mod!(pub grammar);
 use lalrpop_util::ParseError;
 
 pub fn parse(s: &str) -> AST {
-    let mut ast = AST {
-        fns: Vec::new(),
-        main_fn: usize::MAX,
-    };
-    match grammar::ASTParser::new().parse(&mut ast, s) {
-        Ok(()) => ast,
+    match grammar::ASTParser::new().parse(s) {
+        Ok(ast) => ast,
         Err(err) => print_parse_error(s, err),
     }
 }
