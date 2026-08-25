@@ -1,8 +1,10 @@
 mod ast;
-pub use ast::*;
 
 mod parse;
 pub use parse::*;
+
+mod ir;
+pub use ir::*;
 
 extern crate symbol_table;
 pub type Symbol = symbol_table::GlobalSymbol;
