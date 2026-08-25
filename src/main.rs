@@ -10,6 +10,9 @@ pub use ir::IR;
 mod lower;
 pub use lower::*;
 
+mod fresh;
+pub use fresh::*;
+
 extern crate symbol_table;
 pub type Symbol = symbol_table::GlobalSymbol;
 

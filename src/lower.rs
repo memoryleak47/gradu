@@ -5,7 +5,7 @@ use crate::ir::{Terminator, BlkDef, FnDef, ValueId};
 fn lower_expr(e: &ast::Expr, out: &mut Vec<ir::Stmt>) -> ValueId {
     match e {
         ast::Expr::StringLit(x) => {
-            let fresh = 240; // TODO freshness system.
+            let fresh = fresh();
             out.push(ir::Stmt::Compute(fresh, ir::Expr::StringLit(x.clone())));
             fresh
         },
@@ -38,18 +38,20 @@ pub fn lower(ast: AST) -> IR {
             terminator: Terminator::Exit,
             types: HashMap::new(),
         };
-        blocks.insert(0, bdef);
+        let bname = fresh();
+        blocks.insert(bname, bdef);
         FnDef {
             blocks,
-            start: 0,
+            start: bname,
         }
     };
     let mut fns = HashMap::new();
-    fns.insert(0, def);
+    let fname = fresh();
+    fns.insert(fname, def);
     let ir = IR {
         fns,
         global_types: HashMap::new(),
-        start: 0,
+        start: fname,
     };
     ir
 } 
