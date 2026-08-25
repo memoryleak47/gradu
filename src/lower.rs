@@ -1,23 +1,24 @@
 use crate::*;
 
-use crate::ir::{Terminator, BlkDef, FnDef, ValueId};
+use crate::ir::{Terminator, BlkDef, FnDef, ValueId, Ty};
 
-fn lower_expr(e: &ast::Expr, out: &mut Vec<ir::Stmt>) -> ValueId {
+fn lower_expr(e: &ast::Expr, out: &mut BlkDef) -> ValueId {
     match e {
         ast::Expr::StringLit(x) => {
             let fresh = fresh();
-            out.push(ir::Stmt::Compute(fresh, ir::Expr::StringLit(x.clone())));
+            out.stmts.push(ir::Stmt::Compute(fresh, ir::Expr::StringLit(x.clone())));
+            out.types.insert(fresh, Ty::Value); // everything is value-typed on start.
             fresh
         },
         _ => todo!(),
     }
 }
 
-fn lower_stmt(stmt: &ast::Stmt, out: &mut Vec<ir::Stmt>) {
+fn lower_stmt(stmt: &ast::Stmt, out: &mut BlkDef) {
     match stmt {
         ast::Stmt::Print(x) => {
             let v = lower_expr(x, out);
-            out.push(ir::Stmt::Print(v));
+            out.stmts.push(ir::Stmt::Print(v));
         },
         _ => todo!(),
     }
@@ -26,18 +27,18 @@ fn lower_stmt(stmt: &ast::Stmt, out: &mut Vec<ir::Stmt>) {
 pub fn lower(ast: AST) -> IR {
     let def = {
         let mut blocks = HashMap::new();
-        let mut stmts = Vec::new();
 
-        for st in &ast {
-            lower_stmt(st, &mut stmts);
-        }
-
-        let bdef = BlkDef {
+        let mut bdef = BlkDef {
             args: Vec::new(),
-            stmts,
+            stmts: Vec::new(),
             terminator: Terminator::Exit,
             types: HashMap::new(),
         };
+
+        for st in &ast {
+            lower_stmt(st, &mut bdef);
+        }
+
         let bname = fresh();
         blocks.insert(bname, bdef);
         FnDef {
