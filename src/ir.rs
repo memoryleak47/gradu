@@ -6,6 +6,8 @@ pub type BlkId = usize; // block id
 pub type ValueId = usize; // local SSA-value id
 pub type GlobalId = usize; // global variable id
 
+pub type AppliedBlk = (BlkId, Box<[ValueId]>);
+
 pub struct IR {
     fns: HashMap<FnId, FnDef>,
     start: FnId,
@@ -33,14 +35,14 @@ enum Stmt {
 
     WriteGlobal(GlobalId, ValueId),
 
-    Push(/*list*/ValueId, /*value*/ValueId),
-    ListStore(/*list*/ValueId, /*int*/ValueId, /*v*/ValueId), // list[int] = v
-    DictStore(/*dict*/ValueId, /*k*/ValueId, /*v*/ValueId), // dict[k] = v
+    Push(/*list*/ ValueId, /*value*/ ValueId),
+    ListStore(/*list*/ ValueId, /*int*/ ValueId, /*v*/ ValueId), // list[int] = v
+    DictStore(/*dict*/ ValueId, /*k*/ ValueId, /*v*/ ValueId), // dict[k] = v
     Print(ValueId),
 }
 
 enum Expr {
-    FnCall(ValueId, ValueId), // should this stop the block, like a terminator? no?
+    FnCall(ValueId, Box<[ValueId]>), // should this stop the block, like a terminator? no?
 
     LoadGlobal(GlobalId),
 
@@ -48,8 +50,8 @@ enum Expr {
     NewList,
     NewDict,
 
-    IndexList(/*list*/ValueId, /*index*/ValueId),
-    IndexDict(/*dict*/ValueId, /*key*/ValueId),
+    IndexList(/*list*/ ValueId, /*index*/ ValueId),
+    IndexDict(/*dict*/ ValueId, /*key*/ ValueId),
     BinOp(BinOpKind, ValueId, ValueId),
     Length(ValueId),
     Var(Symbol),
@@ -63,8 +65,8 @@ enum Expr {
 
 enum Terminator {
     Return(/*retval*/ ValueId),
-    Goto(BlkId),
-    IfGoto(/*cond*/ ValueId, /*then*/ BlkId, /*else*/BlkId),
+    Goto(AppliedBlk),
+    IfGoto(/*cond*/ ValueId, /*then*/ AppliedBlk, /*else*/ AppliedBlk),
 }
 
 enum Ty {
