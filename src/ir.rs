@@ -86,15 +86,3 @@ pub enum Ty {
     Fn,
     Bool,
 }
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum BinOpKind {
-    Lt,
-    Gt,
-    Mod,
-    Plus,
-    Mul,
-    Minus,
-    Equ,
-    Ne, // !=
-}

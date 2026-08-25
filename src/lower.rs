@@ -2,18 +2,35 @@ use crate::*;
 
 use crate::ir::{Terminator, BlkDef, FnDef, ValueId, Ty, BlkId};
 
-fn lower_binop(kind: ast::BinOpKind, l: ValueId, r: ValueId, out: &mut BlkDef) -> ir::Expr {
+fn fresh_blk(fdef: &mut FnDef) -> BlkId {
+    let new = fresh();
+    fdef.blocks.insert(new, BlkDef {
+        args: Vec::new(),
+        stmts: Vec::new(),
+        terminator: Terminator::Exit,
+        types: HashMap::new(),
+    });
+    new
+}
+
+fn lower_binop(kind: BinOpKind, l: ValueId, r: ValueId, out: &mut BlkDef) -> ir::Expr {
+    use BinOpKind::*;
+
     match kind {
-        ast::BinOpKind::Plus => {
+        Plus|Minus|Mod => {
             let l = mk_expr(ir::Expr::ValueToT(l, Ty::Int), out);
             let r = mk_expr(ir::Expr::ValueToT(r, Ty::Int), out);
-            let o = mk_expr(ir::Expr::BinOp(ir::BinOpKind::Plus, l, r), out);
+            let o = mk_expr(ir::Expr::BinOp(kind, l, r), out);
             ir::Expr::TToValue(o, Ty::Int)
         },
-        ast::BinOpKind::Gt => {
+        Gt|Lt => {
             let l = mk_expr(ir::Expr::ValueToT(l, Ty::Int), out);
             let r = mk_expr(ir::Expr::ValueToT(r, Ty::Int), out);
-            let o = mk_expr(ir::Expr::BinOp(ir::BinOpKind::Gt, l, r), out);
+            let o = mk_expr(ir::Expr::BinOp(kind, l, r), out);
+            ir::Expr::TToValue(o, Ty::Bool)
+        },
+        Equ|Ne => {
+            let o = mk_expr(ir::Expr::BinOp(kind, l, r), out);
             ir::Expr::TToValue(o, Ty::Bool)
         },
         x => todo!("{x:?}"),
@@ -47,15 +64,15 @@ fn lower_expr(e: &ast::Expr, out: &mut BlkDef, varmap: &HashMap<Symbol, ValueId>
 }
 
 fn ty_of(e: &ir::Expr) -> Ty {
-    use ir::BinOpKind::*;
+    use BinOpKind::*;
     match e {
         ir::Expr::StringLit(_) => Ty::String,
         ir::Expr::IntLit(_) => Ty::Int,
         ir::Expr::BoolLit(_) => Ty::Bool,
         ir::Expr::TToValue(_, _) => Ty::Value,
         ir::Expr::ValueToT(_, o) => *o,
-        ir::Expr::BinOp(Plus|Minus, _, _) => Ty::Int,
-        ir::Expr::BinOp(Lt|Gt|Ne, _, _) => Ty::Bool,
+        ir::Expr::BinOp(Plus|Minus|Mod, _, _) => Ty::Int,
+        ir::Expr::BinOp(Lt|Gt|Equ|Ne, _, _) => Ty::Bool,
         x => todo!("{x:?}")
     }
 }
@@ -68,15 +85,8 @@ fn mk_expr(e: ir::Expr, out: &mut BlkDef) -> ValueId {
 }
 
 fn lower_blk(stmts: &[ast::Stmt], out: &mut FnDef, post: BlkId, varmap: &mut HashMap<Symbol, ValueId>) -> BlkId {
-    let new = fresh();
+    let new = fresh_blk(out);
     let mut new_mut = new;
-
-    out.blocks.insert(new, BlkDef {
-        args: Vec::new(),
-        stmts: Vec::new(),
-        terminator: Terminator::Exit,
-        types: HashMap::new(),
-    });
 
     for st in stmts {
         lower_stmt(st, out, &mut new_mut, varmap);
@@ -96,18 +106,27 @@ fn lower_stmt(stmt: &ast::Stmt, out: &mut FnDef, bid: &mut BlkId, varmap: &mut H
             let cond = lower_expr(cond, out.blocks.get_mut(bid).unwrap(), varmap);
             let cond = mk_expr(ir::Expr::ValueToT(cond, Ty::Bool), out.blocks.get_mut(bid).unwrap());
 
-            let post = fresh();
-            out.blocks.insert(post, BlkDef {
-                args: Vec::new(),
-                stmts: Vec::new(),
-                terminator: Terminator::Exit,
-                types: HashMap::new(),
-            });
+            let post = fresh_blk(out);
 
             let then_ = lower_blk(then_, out, post, varmap);
             let else_ = lower_blk(else_, out, post, varmap);
 
             out.blocks.get_mut(bid).unwrap().terminator = Terminator::IfGoto(cond, (then_, Box::new([])), (else_, Box::new([])));
+
+            *bid = post;
+        },
+
+        ast::Stmt::While(cond, body) => {
+            let head = fresh_blk(out);
+            let post = fresh_blk(out);
+            out.blocks.get_mut(bid).unwrap().terminator = Terminator::Goto((head, Box::new([])));
+
+            let cond = lower_expr(cond, out.blocks.get_mut(&head).unwrap(), varmap);
+            let cond = mk_expr(ir::Expr::ValueToT(cond, Ty::Bool), out.blocks.get_mut(&head).unwrap());
+
+            let body = lower_blk(body, out, head, varmap);
+
+            out.blocks.get_mut(&head).unwrap().terminator = Terminator::IfGoto(cond, (body, Box::new([])), (post, Box::new([])));
 
             *bid = post;
         },

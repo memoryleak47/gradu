@@ -1,5 +1,5 @@
 mod ast;
-pub use ast::AST;
+pub use ast::{AST, BinOpKind};
 
 mod parse;
 pub use parse::*;
