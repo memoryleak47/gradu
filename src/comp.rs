@@ -88,20 +88,26 @@ fn compile_ir(ir: &IR) -> String {
         writeln!(&mut out, "void fn_{f}() {{").unwrap();
 
         let startblk = fdef.start;
-        writeln!(&mut out, "  goto bb_{startblk};").unwrap();
 
+        // forward declarations:
         for (b, bdef) in &fdef.blocks {
-            writeln!(&mut out, "  bb_{b}:").unwrap();
             for (var, ty) in &bdef.types {
                 let ty = ty_str(ty);
-                writeln!(&mut out, "    {ty} v_{var};").unwrap();
+                writeln!(&mut out, "  {ty} v_{var};").unwrap();
             }
+        }
 
+        writeln!(&mut out, "  goto bb_{startblk};").unwrap();
+
+        // stmts of the block.
+        for (b, bdef) in &fdef.blocks {
+            writeln!(&mut out, "  bb_{b}:").unwrap();
             for st in &bdef.stmts {
                 comp_stmt(st, ir, &mut out);
             }
             comp_terminator(&bdef.terminator, ir, &mut out);
         }
+
 
         writeln!(&mut out, "}}\n").unwrap();
     }

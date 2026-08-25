@@ -1,1 +1,4 @@
+# arith.gradu
+
+# OUT: 42
 print(37 + 5);

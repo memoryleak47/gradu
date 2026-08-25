@@ -1,1 +1,4 @@
+# hello.gradu
+
+# OUT: hello
 print("hello");
