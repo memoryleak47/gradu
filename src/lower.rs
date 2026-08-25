@@ -3,15 +3,16 @@ use crate::*;
 use crate::ir::{Terminator, BlkDef, FnDef, ValueId, Ty};
 
 fn lower_expr(e: &ast::Expr, out: &mut BlkDef) -> ValueId {
-    match e {
-        ast::Expr::StringLit(x) => {
-            let fresh = fresh();
-            out.stmts.push(ir::Stmt::Compute(fresh, ir::Expr::StringLit(x.clone())));
-            out.types.insert(fresh, Ty::Value); // everything is value-typed on start.
-            fresh
-        },
+    let fresh = fresh();
+
+    let e = match e {
+        ast::Expr::StringLit(x) => ir::Expr::StringLit(x.clone()),
         _ => todo!(),
-    }
+    };
+
+    out.stmts.push(ir::Stmt::Compute(fresh, e));
+    out.types.insert(fresh, Ty::Value); // everything is value-typed on start.
+    fresh
 }
 
 fn lower_stmt(stmt: &ast::Stmt, out: &mut BlkDef) {
