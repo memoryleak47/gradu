@@ -1,7 +1,5 @@
 use crate::*;
 
-pub type FnId = usize;
-
 pub type AST = Box<[Stmt]>;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
