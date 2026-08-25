@@ -8,29 +8,33 @@ pub type GlobalId = usize; // global variable id
 
 pub type AppliedBlk = (BlkId, Box<[ValueId]>);
 
+#[derive(Debug, Clone)]
 pub struct IR {
-    fns: HashMap<FnId, FnDef>,
-    start: FnId,
+    pub fns: HashMap<FnId, FnDef>,
+    pub start: FnId,
 
-    global_types: HashMap<GlobalId, Ty>,
+    pub global_types: HashMap<GlobalId, Ty>,
 }
 
-struct FnDef {
-    blocks: HashMap<BlkId, BlkDef>,
-    start: BlkId,
+#[derive(Debug, Clone)]
+pub struct FnDef {
+    pub blocks: HashMap<BlkId, BlkDef>,
+    pub start: BlkId,
     // fn arguments are inherited from the start block.
 }
 
-struct BlkDef {
+#[derive(Debug, Clone)]
+pub struct BlkDef {
     // the only ValueIds usable in a block are its `args` and those defined via `Compute` in its stmts.
-    stmts: Vec<Stmt>,
-    terminator: Terminator,
+    pub stmts: Vec<Stmt>,
+    pub terminator: Terminator,
 
-    args: Vec<ValueId>,
-    types: HashMap<ValueId, Ty>,
+    pub args: Vec<ValueId>,
+    pub types: HashMap<ValueId, Ty>,
 }
 
-enum Stmt {
+#[derive(Debug, Clone)]
+pub enum Stmt {
     Compute(ValueId, Expr),
 
     WriteGlobal(GlobalId, ValueId),
@@ -41,7 +45,8 @@ enum Stmt {
     Print(ValueId),
 }
 
-enum Expr {
+#[derive(Debug, Clone)]
+pub enum Expr {
     FnCall(ValueId, Box<[ValueId]>), // in minirust this was a terminator, but not in LLVM, so I'll leave it as an Expr.
 
     LoadGlobal(GlobalId),
@@ -62,13 +67,16 @@ enum Expr {
     NilLit,
 }
 
-enum Terminator {
+#[derive(Debug, Clone)]
+pub enum Terminator {
+    Exit,
     Return(/*retval*/ ValueId),
     Goto(AppliedBlk),
     IfGoto(/*cond*/ ValueId, /*then*/ AppliedBlk, /*else*/ AppliedBlk),
 }
 
-enum Ty {
+#[derive(Debug, Clone)]
+pub enum Ty {
     Value,
     Int,
     String,
@@ -76,7 +84,7 @@ enum Ty {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum BinOpKind {
+pub enum BinOpKind {
     Lt,
     Gt,
     Mod,

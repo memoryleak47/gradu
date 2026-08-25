@@ -1,10 +1,14 @@
 mod ast;
+pub use ast::AST;
 
 mod parse;
 pub use parse::*;
 
 mod ir;
-pub use ir::*;
+pub use ir::IR;
+
+mod lower;
+pub use lower::*;
 
 extern crate symbol_table;
 pub type Symbol = symbol_table::GlobalSymbol;
@@ -21,5 +25,6 @@ fn main() {
     let s = std::fs::read_to_string(path).unwrap();
 
     let ast = parse(&s);
-    dbg!(ast);
+    let ir = lower(ast);
+    dbg!(ir);
 }
