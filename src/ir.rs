@@ -54,7 +54,6 @@ enum Expr {
     IndexDict(/*dict*/ ValueId, /*key*/ ValueId),
     BinOp(BinOpKind, ValueId, ValueId),
     Length(ValueId),
-    Var(Symbol),
     Input,
 
     IntLit(i64),
