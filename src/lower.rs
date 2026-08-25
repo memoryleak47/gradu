@@ -8,6 +8,10 @@ fn lower_expr(e: &ast::Expr, out: &mut BlkDef) -> ValueId {
             let a = mk_expr(ir::Expr::StringLit(x.clone()), out);
             ir::Expr::TToValue(a, Ty::String)
         },
+        ast::Expr::IntLit(x) => {
+            let a = mk_expr(ir::Expr::IntLit(*x), out);
+            ir::Expr::TToValue(a, Ty::Int)
+        },
         ast::Expr::BinOp(kind, l, r) => {
             let l = lower_expr(l, out);
             let r = lower_expr(r, out);
@@ -30,7 +34,10 @@ fn lower_expr(e: &ast::Expr, out: &mut BlkDef) -> ValueId {
 fn ty_of(e: &ir::Expr) -> Ty {
     match e {
         ir::Expr::StringLit(_) => Ty::String,
+        ir::Expr::IntLit(_) => Ty::Int,
         ir::Expr::TToValue(_, _) => Ty::Value,
+        ir::Expr::ValueToT(_, o) => *o,
+        ir::Expr::BinOp(ir::BinOpKind::Plus, _, _) => Ty::Int,
         x => todo!("{x:?}")
     }
 }

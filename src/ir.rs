@@ -78,7 +78,7 @@ pub enum Terminator {
     IfGoto(/*cond*/ ValueId, /*then*/ AppliedBlk, /*else*/ AppliedBlk),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Ty {
     Value,
     Int,

@@ -26,7 +26,13 @@ pub fn comp(ir: &IR) {
 fn comp_expr(e: &Expr, ir: &IR, out: &mut String) {
     match e {
         Expr::StringLit(x) => write!(out, "\"{x}\"").unwrap(),
+        Expr::IntLit(x) => write!(out, "{x}").unwrap(),
+        Expr::BinOp(BinOpKind::Plus, x, y) => write!(out, "v_{x} + v_{y}").unwrap(),
+
         Expr::TToValue(x, Ty::String) => write!(out, "str_to_value(v_{x})").unwrap(),
+        Expr::TToValue(x, Ty::Int) => write!(out, "int_to_value(v_{x})").unwrap(),
+
+        Expr::ValueToT(x, Ty::Int) => write!(out, "value_to_int(v_{x})").unwrap(),
         x => todo!("{x:?}"),
     }
 }
@@ -35,6 +41,7 @@ fn ty_str(x: &Ty) -> &str {
     match x {
         Ty::Value => "Value",
         Ty::String => "char*",
+        Ty::Int => "int",
         x => todo!("{x:?}"),
     }
 }
