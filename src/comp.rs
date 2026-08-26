@@ -95,7 +95,7 @@ fn compile_ir(ir: &IR) -> String {
         let startblk = fdef.start;
 
         // forward declarations:
-        for (b, bdef) in &fdef.blocks {
+        for (_, bdef) in &fdef.blocks {
             for (var, ty) in &bdef.types {
                 let ty = ty_str(ty);
                 writeln!(&mut out, "  {ty} v_{var};").unwrap();
@@ -106,7 +106,14 @@ fn compile_ir(ir: &IR) -> String {
 
         // stmts of the block.
         for (b, bdef) in &fdef.blocks {
-            writeln!(&mut out, "  bb_{b}:").unwrap();
+            write!(&mut out, "  bb_{b}: // ").unwrap();
+            for (i, a) in bdef.args.iter().enumerate() {
+                write!(&mut out, "v_{a}").unwrap();
+                if i != bdef.args.len()-1 {
+                    write!(&mut out, ", ").unwrap();
+                }
+            }
+            write!(&mut out, "\n").unwrap();
             for st in &bdef.stmts {
                 comp_stmt(st, ir, &mut out);
             }
