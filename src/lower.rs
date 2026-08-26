@@ -1,6 +1,6 @@
 use crate::*;
 
-use crate::ir::{Terminator, BlkDef, FnDef, ValueId, Ty, BlkId};
+use crate::ir::{Terminator, BlkDef, FnDef, ValueId, Ty, BlkId, FnId};
 
 fn fresh_blk(fdef: &mut FnDef) -> BlkId {
     let new = fresh();
@@ -139,6 +139,17 @@ fn lower_stmt(stmt: &ast::Stmt, out: &mut FnDef, bid: &mut BlkId, varmap: &mut H
 }
 
 pub fn lower(ast: &AST) -> IR {
+    let mut ir = IR {
+        fns: HashMap::new(),
+        global_types: HashMap::new(),
+        start: 0,
+    };
+    let start = lower_fn(&[], ast, &mut ir);
+    ir.start = start;
+    ir
+}
+
+fn lower_fn(args: &[Symbol], body: &[ast::Stmt], ir: &mut IR) -> FnId {
     let mut blocks = HashMap::new();
 
     let mut bdef = BlkDef {
@@ -157,16 +168,10 @@ pub fn lower(ast: &AST) -> IR {
 
     let mut current = bname;
     let mut varmap = HashMap::new();
-    for st in ast {
+    for st in body {
         lower_stmt(st, &mut fdef, &mut current, &mut varmap);
     }
-    let mut fns = HashMap::new();
     let fname = fresh();
-    fns.insert(fname, fdef);
-    let ir = IR {
-        fns,
-        global_types: HashMap::new(),
-        start: fname,
-    };
-    ir
+    ir.fns.insert(fname, fdef);
+    fname
 }
