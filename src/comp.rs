@@ -28,6 +28,7 @@ fn comp_expr(e: &Expr, ir: &IR, out: &mut String) {
         Expr::StringLit(x) => write!(out, "\"{x}\"").unwrap(),
         Expr::IntLit(x) => write!(out, "{x}").unwrap(),
         Expr::BoolLit(b) => write!(out, "{b}").unwrap(),
+        Expr::NilLit => write!(out, "nil_to_value({{}})").unwrap(),
         Expr::BinOp(BinOpKind::Plus, x, y) => write!(out, "v_{x} + v_{y}").unwrap(),
         Expr::BinOp(BinOpKind::Minus, x, y) => write!(out, "v_{x} - v_{y}").unwrap(),
         Expr::BinOp(BinOpKind::Lt, x, y) => write!(out, "v_{x} < v_{y}").unwrap(),
