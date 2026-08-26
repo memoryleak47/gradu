@@ -163,7 +163,8 @@ fn lower_fn(args: &[Symbol], body: &[ast::Stmt], ir: &mut IR) -> FnId {
 
     let b1 = fresh();
     let b2 = fresh();
-    let nil = fresh();
+    let nil1 = fresh();
+    let nil2 = fresh();
 
     let args1: Vec<_> = (0..args.len()).map(|_| fresh()).collect();
     let args2: Vec<_> = (0..vars.len()).map(|_| fresh()).collect();
@@ -172,17 +173,21 @@ fn lower_fn(args: &[Symbol], body: &[ast::Stmt], ir: &mut IR) -> FnId {
         let o = if let Some(i) = args.iter().position(|y| y == x) {
             args2[i]
         } else {
-            nil
+            nil2
         };
 
         (*x, o)
     }).collect();
 
     let mut types = HashMap::new();
-    types.insert(nil, Ty::Value);
+    types.insert(nil1, Ty::Nil);
+    types.insert(nil2, Ty::Value);
     let mut bdef1 = BlkDef {
         args: args1,
-        stmts: vec![ir::Stmt::Compute(nil, ir::Expr::NilLit)],
+        stmts: vec![
+            ir::Stmt::Compute(nil1, ir::Expr::NilLit),
+            ir::Stmt::Compute(nil2, ir::Expr::TToValue(nil1, Ty::Nil)),
+        ],
         terminator: Terminator::Goto(mk_applied_blk(b2, &varmap)),
         types,
     };

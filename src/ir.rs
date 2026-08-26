@@ -85,4 +85,5 @@ pub enum Ty {
     String,
     Fn,
     Bool,
+    Nil,
 }

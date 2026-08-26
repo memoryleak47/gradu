@@ -28,7 +28,7 @@ fn comp_expr(e: &Expr, ir: &IR, out: &mut String) {
         Expr::StringLit(x) => write!(out, "\"{x}\"").unwrap(),
         Expr::IntLit(x) => write!(out, "{x}").unwrap(),
         Expr::BoolLit(b) => write!(out, "{b}").unwrap(),
-        Expr::NilLit => write!(out, "nil_to_value({{}})").unwrap(),
+        Expr::NilLit => write!(out, "(nil) {{}}").unwrap(),
         Expr::BinOp(BinOpKind::Plus, x, y) => write!(out, "v_{x} + v_{y}").unwrap(),
         Expr::BinOp(BinOpKind::Minus, x, y) => write!(out, "v_{x} - v_{y}").unwrap(),
         Expr::BinOp(BinOpKind::Lt, x, y) => write!(out, "v_{x} < v_{y}").unwrap(),
@@ -40,10 +40,13 @@ fn comp_expr(e: &Expr, ir: &IR, out: &mut String) {
         Expr::TToValue(x, Ty::String) => write!(out, "str_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Int) => write!(out, "int_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Bool) => write!(out, "bool_to_value(v_{x})").unwrap(),
+        Expr::TToValue(x, Ty::Nil) => write!(out, "nil_to_value(v_{x})").unwrap(),
 
         Expr::ValueToT(x, Ty::String) => write!(out, "value_to_str(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Int) => write!(out, "value_to_int(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Bool) => write!(out, "value_to_bool(v_{x})").unwrap(),
+        Expr::ValueToT(x, Ty::Nil) => write!(out, "value_to_nil(v_{x})").unwrap(),
+
         x => todo!("{x:?}"),
     }
 }
@@ -54,7 +57,8 @@ fn ty_str(x: &Ty) -> &str {
         Ty::String => "char*",
         Ty::Int => "int",
         Ty::Bool => "bool",
-        x => todo!("{x:?}"),
+        Ty::Nil => "nil",
+        Ty::Fn => "void*",
     }
 }
 
