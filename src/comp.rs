@@ -61,6 +61,7 @@ fn comp_expr(e: &Expr, out: &mut String) {
         Expr::LoadGlobal(i) => write!(out, "g_{i}").unwrap(),
         Expr::NewList => write!(out, "new_list()").unwrap(),
         Expr::IndexList(l, i) => write!(out, "index_list(v_{l}, v_{i})").unwrap(),
+        Expr::Length(l) => write!(out, "length(v_{l})").unwrap(),
 
         Expr::TToValue(x, Ty::String) => write!(out, "str_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Int) => write!(out, "int_to_value(v_{x})").unwrap(),

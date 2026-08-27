@@ -113,9 +113,11 @@ impl IR {
                                 Expr::NilLit => print!("nil"),
                                 Expr::IntLit(i) => print!("{i}"),
                                 Expr::BoolLit(b) => print!("{b}"),
+                                Expr::NewList => print!("[]"),
                                 Expr::TToValue(v, ty) => print!("({ty:?} -> Value)(v_{v})"),
                                 Expr::ValueToT(v, ty) => print!("(Value -> {ty:?})(v_{v})"),
                                 Expr::BinOp(kind, l, r) => print!("v_{l} {} v_{r}", binop_str(*kind)),
+                                Expr::LoadGlobal(g) => print!("g_{g}"),
                                 Expr::FnCall(f, args) => {
                                     print!("v_{f}(");
                                     for (i, a) in args.iter().enumerate() {
@@ -130,6 +132,7 @@ impl IR {
                             }
                             println!(";");
                         },
+                        Stmt::WriteGlobal(g, v) => println!("    g_{g} = v_{v};"),
                         Stmt::Print(x) => println!("    print(v_{x});"),
                         x => println!("    {x:?}"),
                     }

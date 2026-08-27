@@ -94,6 +94,13 @@ fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> Valu
 
             ir::Expr::IndexList(l, i)
         },
+        ast::Expr::Length(l) => {
+            let l = lower_expr(l, ctxt, gctxt);
+            let l = mk_expr(ir::Expr::ValueToT(l, Ty::List), ctxt);
+
+            let out = mk_expr(ir::Expr::Length(l), ctxt);
+            ir::Expr::TToValue(out, Ty::Int)
+        },
         x => todo!("{x:?}"),
     };
 
@@ -120,6 +127,7 @@ fn ty_of(e: &ir::Expr) -> Ty {
         ir::Expr::LoadGlobal(..) => Ty::Value,
         ir::Expr::NewList => Ty::List,
         ir::Expr::IndexList(..) => Ty::Value,
+        ir::Expr::Length(..) => Ty::Int,
 
         x => todo!("{x:?}")
     }
