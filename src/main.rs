@@ -32,5 +32,6 @@ fn main() {
 
     let ast = parse(&s);
     let ir = lower(&ast);
+    ir.dump();
     comp(&ir);
 }

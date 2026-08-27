@@ -88,3 +88,48 @@ pub enum Ty {
     Bool,
     Nil,
 }
+
+impl IR {
+    pub fn dump(&self) {
+        for (f, fdef) in &self.fns {
+            println!("fn fn_{f}:");
+            for (b, bdef) in &fdef.blocks {
+                let startstr = if *b == fdef.start { "start " } else { "" };
+                println!("  {startstr}bb_{b}:");
+                for st in &bdef.stmts {
+                    match st {
+                        Stmt::Compute(n, e) => println!("    v_{n} = {e:?}"),
+                        x => println!("    {x:?}"),
+                    }
+                }
+                let dump_goto = |xy: &AppliedBlk| {
+                    let (x, y) = xy;
+                    print!("goto bb_{x}(");
+                    for (i, a) in y.iter().enumerate() {
+                        print!("v_{a}");
+                        if i != y.len()-1 {
+                            print!(", ");
+                        }
+                    }
+                    print!(")");
+                };
+                match &bdef.terminator {
+                    Terminator::Goto(t) => {
+                        print!("    ");
+                        dump_goto(t);
+                        println!("");
+                    },
+                    Terminator::IfGoto(cond, x, y) => {
+                        print!("    if v_{cond}: ");
+                        dump_goto(x);
+                        print!(" else ");
+                        dump_goto(y);
+                        println!("");
+                    },
+                    Terminator::Exit => println!("    exit"),
+                    Terminator::Return(v) => println!("    return v_{v}"),
+                }
+            }
+        }
+    }
+}

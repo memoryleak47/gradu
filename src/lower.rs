@@ -112,6 +112,8 @@ fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt) -> BlkId {
     let old = ctxt.current;
     let new = ctxt.fresh_blk();
 
+    let mut terminator_defined = false;
+
     ctxt.focus_blk(new);
 
     for st in stmts {
@@ -160,13 +162,16 @@ fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt) -> BlkId {
             ast::Stmt::Return(e) => {
                 let v = lower_expr(e, ctxt);
                 ctxt.set_terminator(Terminator::Return(v));
+                terminator_defined = true;
                 break
             },
             x => todo!("{x:?}"),
         }
     }
 
-    ctxt.set_terminator(Terminator::Goto(ctxt.mk_applied_blk(post)));
+    if !terminator_defined {
+        ctxt.set_terminator(Terminator::Goto(ctxt.mk_applied_blk(post)));
+    }
     ctxt.focus_blk(old);
 
     new
