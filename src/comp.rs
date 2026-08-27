@@ -23,7 +23,7 @@ pub fn comp(ir: &IR) {
     println!("{out2}");
 }
 
-fn comp_expr(e: &Expr, ir: &IR, out: &mut String) {
+fn comp_expr(e: &Expr, out: &mut String) {
     match e {
         Expr::StringLit(x) => write!(out, "\"{x}\"").unwrap(),
         Expr::IntLit(x) => write!(out, "{x}").unwrap(),
@@ -69,7 +69,7 @@ fn comp_stmt(stmt: &Stmt, ir: &IR, out: &mut String) {
         },
         Stmt::Compute(v, e) => {
             write!(out, "    v_{v} = ").unwrap();
-            comp_expr(e, ir, out);
+            comp_expr(e, out);
             writeln!(out, ";").unwrap();
         },
         _ => todo!(),

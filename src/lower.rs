@@ -276,7 +276,7 @@ impl FnCtxt {
         self.focus_blk(new);
 
         let mut blockvars = Vec::new();
-        for x in self.vars.clone() {
+        for _ in 0..self.vars.len() {
             blockvars.push(self.fresh_blkarg(Ty::Value));
         }
         self.blockvars.insert(new, blockvars);
