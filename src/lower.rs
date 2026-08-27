@@ -64,7 +64,7 @@ fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> Valu
         },
         ast::Expr::Fn(args, body) => {
             let mut ir = std::mem::take(&mut ctxt.ir);
-            let (f, ir) = lower_fn(args, body, ir, gctxt);
+            let (f, ir) = lower_fn(false, args, body, ir, gctxt);
             ctxt.ir = ir;
 
             let a = mk_expr(ir::Expr::Fn(f), ctxt);
@@ -194,7 +194,7 @@ pub fn lower(ast: &AST) -> IR {
         start: 0,
     };
     let mut gctxt = Vec::new();
-    let (start, mut ir) = lower_fn(&[], ast, ir, &mut gctxt);
+    let (start, mut ir) = lower_fn(true, &[], ast, ir, &mut gctxt);
     ir.start = start;
     ir
 }
@@ -213,9 +213,9 @@ fn gvar_idx(v: Symbol, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> GlobalId {
     })
 }
 
-fn lower_fn(args: &[Symbol], body: &[ast::Stmt], mut ir: IR, gctxt: &mut Vec<Symbol>) -> (FnId, IR) {
-    // compute vars.
-    let vars = get_vars(args, body);
+fn lower_fn(main: bool, args: &[Symbol], body: &[ast::Stmt], mut ir: IR, gctxt: &mut Vec<Symbol>) -> (FnId, IR) {
+    // compute vars (main has no local variables, as its local vars are global vars)
+    let vars = if main { Vec::new() } else { get_vars(args, body) };
 
     // create shallow function.
     let fname = fresh();

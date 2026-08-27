@@ -97,7 +97,8 @@ fn comp_stmt(stmt: &Stmt, ir: &IR, out: &mut String) {
             comp_expr(e, out);
             writeln!(out, ";").unwrap();
         },
-        _ => todo!(),
+        Stmt::WriteGlobal(gid, v) => writeln!(out, "    g_{gid} = v_{v};").unwrap(),
+        x => todo!("{x:?}"),
     }
 }
 
