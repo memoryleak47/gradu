@@ -45,6 +45,10 @@ fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> Valu
             let a = mk_expr(ir::Expr::IntLit(*x), ctxt);
             ir::Expr::TToValue(a, Ty::Int)
         },
+        ast::Expr::NilLit => {
+            let a = mk_expr(ir::Expr::NilLit, ctxt);
+            ir::Expr::TToValue(a, Ty::Nil)
+        },
         ast::Expr::BoolLit(x) => {
             let a = mk_expr(ir::Expr::BoolLit(*x), ctxt);
             ir::Expr::TToValue(a, Ty::Bool)
@@ -258,9 +262,17 @@ fn lower_fn(main: bool, args: &[Symbol], body: &[ast::Stmt], mut ir: IR, gctxt: 
 
     // define end block to return Nil
     ctxt.focus_blk(end);
-    let nil1 = mk_expr(ir::Expr::NilLit, &mut ctxt);
-    let nil2 = mk_expr(ir::Expr::TToValue(nil1, Ty::Nil), &mut ctxt);
-    ctxt.set_terminator(Terminator::Return(nil2));
+    let nil1_ = mk_expr(ir::Expr::NilLit, &mut ctxt);
+    let nil2_ = mk_expr(ir::Expr::TToValue(nil1_, Ty::Nil), &mut ctxt);
+    ctxt.set_terminator(Terminator::Return(nil2_));
+
+    // initialize global vars to nil.
+    if main {
+        ctxt.focus_blk(start);
+        for g in 0..gctxt.len() {
+            ctxt.push_stmt(ir::Stmt::WriteGlobal(g, nil2));
+        }
+    }
 
     (fname, ctxt.ir)
 }
