@@ -1,7 +1,7 @@
 use crate::*;
 
 use std::collections::{BTreeSet, BTreeMap};
-use crate::ir::{Terminator, BlkDef, FnDef, ValueId, Ty, BlkId, FnId, AppliedBlk};
+use crate::ir::{Terminator, BlkDef, FnDef, ValueId, GlobalId, Ty, BlkId, FnId, AppliedBlk};
 
 // The context that governs lowering a particular function.
 struct FnCtxt {
@@ -35,7 +35,7 @@ fn lower_binop(kind: BinOpKind, l: ValueId, r: ValueId, ctxt: &mut FnCtxt) -> ir
     }
 }
 
-fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt) -> ValueId {
+fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> ValueId {
     let e = match e {
         ast::Expr::StringLit(x) => {
             let a = mk_expr(ir::Expr::StringLit(x.clone()), ctxt);
@@ -50,25 +50,29 @@ fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt) -> ValueId {
             ir::Expr::TToValue(a, Ty::Bool)
         },
         ast::Expr::BinOp(kind, l, r) => {
-            let l = lower_expr(l, ctxt);
-            let r = lower_expr(r, ctxt);
+            let l = lower_expr(l, ctxt, gctxt);
+            let r = lower_expr(r, ctxt, gctxt);
             lower_binop(*kind, l, r, ctxt)
         },
         ast::Expr::Var(v) => {
-            let i = var_idx(*v, ctxt);
-            return ctxt.blockvars[&ctxt.current][i]
+            if let Some(i) = var_idx(*v, ctxt) {
+                return ctxt.blockvars[&ctxt.current][i]
+            } else {
+                let i = gvar_idx(*v, ctxt, gctxt);
+                ir::Expr::LoadGlobal(i)
+            }
         },
         ast::Expr::Fn(args, body) => {
             let mut ir = std::mem::take(&mut ctxt.ir);
-            let (f, ir) = lower_fn(args, body, ir);
+            let (f, ir) = lower_fn(args, body, ir, gctxt);
             ctxt.ir = ir;
 
             let a = mk_expr(ir::Expr::Fn(f), ctxt);
             ir::Expr::TToValue(a, Ty::Fn)
         },
         ast::Expr::FnCall(f, args) => {
-            let f = lower_expr(f, ctxt);
-            let args: Vec<_> = args.iter().map(|x| lower_expr(x, ctxt)).collect();
+            let f = lower_expr(f, ctxt, gctxt);
+            let args: Vec<_> = args.iter().map(|x| lower_expr(x, ctxt, gctxt)).collect();
 
             let f = mk_expr(ir::Expr::ValueToT(f, Ty::Fn), ctxt);
             ir::Expr::FnCall(f, args.into())
@@ -96,6 +100,8 @@ fn ty_of(e: &ir::Expr) -> Ty {
         ir::Expr::FnCall(..) => Ty::Value,
         ir::Expr::Fn(..) => Ty::Fn,
 
+        ir::Expr::LoadGlobal(..) => Ty::Value,
+
         x => todo!("{x:?}")
     }
 }
@@ -108,7 +114,7 @@ fn mk_expr(e: ir::Expr, ctxt: &mut FnCtxt) -> ValueId {
     fresh
 }
 
-fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt) -> BlkId {
+fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> BlkId {
     let old = ctxt.current;
     let new = ctxt.fresh_blk();
 
@@ -119,17 +125,17 @@ fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt) -> BlkId {
     for st in stmts {
         match st {
             ast::Stmt::Print(x) => {
-                let v = lower_expr(x, ctxt);
+                let v = lower_expr(x, ctxt, gctxt);
                 ctxt.push_stmt(ir::Stmt::Print(v));
             },
             ast::Stmt::If(cond, then_, else_) => {
-                let cond = lower_expr(cond,  ctxt);
+                let cond = lower_expr(cond, ctxt, gctxt);
                 let cond = mk_expr(ir::Expr::ValueToT(cond, Ty::Bool), ctxt);
 
                 let post = ctxt.fresh_blk();
 
-                let then_ = lower_blk(then_, post, ctxt);
-                let else_ = lower_blk(else_, post, ctxt);
+                let then_ = lower_blk(then_, post, ctxt, gctxt);
+                let else_ = lower_blk(else_, post, ctxt, gctxt);
 
                 ctxt.set_terminator(Terminator::IfGoto(cond, ctxt.mk_applied_blk(then_), ctxt.mk_applied_blk(else_)));
 
@@ -142,11 +148,11 @@ fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt) -> BlkId {
 
                 ctxt.set_terminator(Terminator::Goto(ctxt.mk_applied_blk(head)));
 
-                let body = lower_blk(body, head, ctxt);
+                let body = lower_blk(body, head, ctxt, gctxt);
 
                 ctxt.focus_blk(head);
 
-                let cond = lower_expr(cond, ctxt);
+                let cond = lower_expr(cond, ctxt, gctxt);
                 let cond = mk_expr(ir::Expr::ValueToT(cond, Ty::Bool), ctxt);
 
                 ctxt.set_terminator(Terminator::IfGoto(cond, ctxt.mk_applied_blk(body), ctxt.mk_applied_blk(post)));
@@ -154,13 +160,17 @@ fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt) -> BlkId {
                 ctxt.focus_blk(post);
             },
             ast::Stmt::Assign(var, val) => {
-                let val = lower_expr(val, ctxt);
+                let val = lower_expr(val, ctxt, gctxt);
 
-                let i = var_idx(*var, ctxt);
-                ctxt.blockvars.get_mut(&ctxt.current).unwrap()[i] = val;
+                if let Some(i) = var_idx(*var, ctxt) {
+                    ctxt.blockvars.get_mut(&ctxt.current).unwrap()[i] = val;
+                } else {
+                    let i = gvar_idx(*var, ctxt, gctxt);
+                    ctxt.push_stmt(ir::Stmt::WriteGlobal(i, val));
+                }
             },
             ast::Stmt::Return(e) => {
-                let v = lower_expr(e, ctxt);
+                let v = lower_expr(e, ctxt, gctxt);
                 ctxt.set_terminator(Terminator::Return(v));
                 terminator_defined = true;
                 break
@@ -183,16 +193,27 @@ pub fn lower(ast: &AST) -> IR {
         global_types: HashMap::new(),
         start: 0,
     };
-    let (start, mut ir) = lower_fn(&[], ast, ir);
+    let mut gctxt = Vec::new();
+    let (start, mut ir) = lower_fn(&[], ast, ir, &mut gctxt);
     ir.start = start;
     ir
 }
 
-fn var_idx(v: Symbol, ctxt: &FnCtxt) -> usize {
-    ctxt.vars.iter().position(|v2| v == *v2).unwrap()
+// if this returns None, we have a global variable.
+fn var_idx(v: Symbol, ctxt: &FnCtxt) -> Option<usize> {
+    ctxt.vars.iter().position(|v2| v == *v2)
 }
 
-fn lower_fn(args: &[Symbol], body: &[ast::Stmt], mut ir: IR) -> (FnId, IR) {
+fn gvar_idx(v: Symbol, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> GlobalId {
+    gctxt.iter().position(|v2| v == *v2).unwrap_or_else(|| {
+        let i = gctxt.len();
+        gctxt.push(v);
+        ctxt.ir.global_types.insert(i, Ty::Value);
+        i
+    })
+}
+
+fn lower_fn(args: &[Symbol], body: &[ast::Stmt], mut ir: IR, gctxt: &mut Vec<Symbol>) -> (FnId, IR) {
     // compute vars.
     let vars = get_vars(args, body);
 
@@ -223,7 +244,7 @@ fn lower_fn(args: &[Symbol], body: &[ast::Stmt], mut ir: IR) -> (FnId, IR) {
 
     let end = ctxt.fresh_blk();
 
-    let b2 = lower_blk(body, end, &mut ctxt);
+    let b2 = lower_blk(body, end, &mut ctxt, gctxt);
 
     let app = ctxt.vars.iter().map(|x|
         if let Some(i) = args.iter().position(|y| y == x) {
@@ -325,43 +346,16 @@ impl FnCtxt {
 // get_vars //
 
 fn get_vars(args: &[Symbol], body: &[ast::Stmt]) -> Vec<Symbol> {
-    let mut out = args.iter().copied().collect();
-    get_vars2(body, &mut out);
-    out.into_iter().collect()
-}
+    let mut vars: BTreeSet<Symbol> = args.iter().copied().collect();
+    let mut globals: BTreeSet<Symbol> = BTreeSet::new();
 
-fn get_vars2(body: &[ast::Stmt], out: &mut BTreeSet<Symbol>) {
     for a in body {
-        use ast::Stmt::*;
         match a {
-            Global(s) => { out.insert(*s); },
-            Return(e)|Print(e) => get_vars2_expr(e, out),
-            Assign(v, e) => { out.insert(*v); get_vars2_expr(e, out); },
-            Push(e1, e2) => { get_vars2_expr(e1, out); get_vars2_expr(e2, out); },
-            ListStore(e1, e2, e3) | DictStore(e1, e2, e3) => { get_vars2_expr(e1, out); get_vars2_expr(e2, out); get_vars2_expr(e3, out); },
-            If(e, b1, b2) => { get_vars2_expr(e, out); get_vars2(b1, out); get_vars2(b2, out); },
-            While(e, b) => { get_vars2_expr(e, out); get_vars2(b, out); },
+            ast::Stmt::Global(s) => { globals.insert(*s); },
+            ast::Stmt::Assign(v, _) => { vars.insert(*v); },
+            _ => {},
         }
     }
-}
 
-fn get_vars2_expr(e: &ast::Expr, out: &mut BTreeSet<Symbol>) {
-    use ast::Expr::*;
-    match e {
-        Var(v) => { out.insert(*v); },
-        IndexList(e1, e2) | IndexDict(e1, e2) | BinOp(_, e1, e2) => {
-            get_vars2_expr(e1, out); get_vars2_expr(e2, out);
-        },
-        Length(e) => {
-            get_vars2_expr(e, out);
-        },
-        FnCall(e, args) => {
-            get_vars2_expr(e, out);
-            for a in args {
-                get_vars2_expr(a, out);
-            }
-        },
-        Input|NewList|NewDict|Fn(..)|IntLit(_)|StringLit(_)|BoolLit(_)|NilLit => {},
-    }
+    (&vars - &globals).into_iter().collect()
 }
-

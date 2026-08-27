@@ -58,6 +58,8 @@ fn comp_expr(e: &Expr, out: &mut String) {
             write!(out, ")").unwrap();
         },
 
+        Expr::LoadGlobal(i) => write!(out, "g_{i}").unwrap(),
+
         Expr::TToValue(x, Ty::String) => write!(out, "str_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Int) => write!(out, "int_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Bool) => write!(out, "bool_to_value(v_{x})").unwrap(),
@@ -185,6 +187,12 @@ fn compile_fn(f: FnId, fdef: &FnDef, out: &mut String, ir: &IR) {
 fn compile_ir(ir: &IR) -> String {
     let mut out = String::new();
     writeln!(&mut out, "#include \"preamble.h\"\n").unwrap();
+
+    // global forward declarations
+    for (g, ty) in &ir.global_types {
+        let ty = ty_str(ty);
+        writeln!(&mut out, "{ty} g_{g};").unwrap();
+    }
 
     // fn forward declarations
     for (f, fdef) in &ir.fns {
