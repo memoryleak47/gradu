@@ -126,6 +126,41 @@ fn comp_terminator(terminator: &Terminator, f: FnId, ir: &IR, out: &mut String) 
     }
 }
 
+fn compile_fn(f: FnId, fdef: &FnDef, out: &mut String, ir: &IR) {
+    let retty = ty_str(&fdef.retty);
+    writeln!(out, "{retty} fn_{f}() {{").unwrap();
+
+    let startblk = fdef.start;
+
+    // forward declarations:
+    for (_, bdef) in &fdef.blocks {
+        for (var, ty) in &bdef.types {
+            let ty = ty_str(ty);
+            writeln!(out, "  {ty} v_{var};").unwrap();
+        }
+    }
+
+    writeln!(out, "  goto bb_{startblk};").unwrap();
+
+    // stmts of the block.
+    for (b, bdef) in &fdef.blocks {
+        write!(out, "  bb_{b}: // ").unwrap();
+        for (i, a) in bdef.args.iter().enumerate() {
+            write!(out, "v_{a}").unwrap();
+            if i != bdef.args.len()-1 {
+                write!(out, ", ").unwrap();
+            }
+        }
+        write!(out, "\n").unwrap();
+        for st in &bdef.stmts {
+            comp_stmt(st, ir, out);
+        }
+        comp_terminator(&bdef.terminator, f, ir, out);
+    }
+
+    writeln!(out, "}}\n").unwrap();
+}
+
 fn compile_ir(ir: &IR) -> String {
     let mut out = String::new();
     writeln!(&mut out, "#include \"preamble.h\"\n").unwrap();
@@ -137,39 +172,7 @@ fn compile_ir(ir: &IR) -> String {
     }
 
     for (f, fdef) in &ir.fns {
-        let retty = ty_str(&fdef.retty);
-        writeln!(&mut out, "{retty} fn_{f}() {{").unwrap();
-
-        let startblk = fdef.start;
-
-        // forward declarations:
-        for (_, bdef) in &fdef.blocks {
-            for (var, ty) in &bdef.types {
-                let ty = ty_str(ty);
-                writeln!(&mut out, "  {ty} v_{var};").unwrap();
-            }
-        }
-
-        writeln!(&mut out, "  goto bb_{startblk};").unwrap();
-
-        // stmts of the block.
-        for (b, bdef) in &fdef.blocks {
-            write!(&mut out, "  bb_{b}: // ").unwrap();
-            for (i, a) in bdef.args.iter().enumerate() {
-                write!(&mut out, "v_{a}").unwrap();
-                if i != bdef.args.len()-1 {
-                    write!(&mut out, ", ").unwrap();
-                }
-            }
-            write!(&mut out, "\n").unwrap();
-            for st in &bdef.stmts {
-                comp_stmt(st, ir, &mut out);
-            }
-            comp_terminator(&bdef.terminator, *f, ir, &mut out);
-        }
-
-
-        writeln!(&mut out, "}}\n").unwrap();
+        compile_fn(*f, fdef, &mut out, ir);
     }
 
     let start = ir.start;
