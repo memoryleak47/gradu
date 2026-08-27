@@ -58,6 +58,19 @@ fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt) -> ValueId {
             let i = var_idx(*v, ctxt);
             return ctxt.blockvars[&ctxt.current][i]
         },
+        ast::Expr::Fn(args, body) => {
+            let mut ir = std::mem::take(&mut ctxt.ir);
+            let (f, ir) = lower_fn(args, body, ir);
+            ctxt.ir = ir;
+
+            ir::Expr::Fn(f)
+        },
+        ast::Expr::FnCall(f, args) => {
+            let f = lower_expr(f, ctxt);
+            let args: Vec<_> = args.iter().map(|x| lower_expr(x, ctxt)).collect();
+
+            ir::Expr::FnCall(f, args.into())
+        },
         x => todo!("{x:?}"),
     };
 
@@ -75,8 +88,11 @@ fn ty_of(e: &ir::Expr) -> Ty {
         ir::Expr::TToValue(_, _) => Ty::Value,
         ir::Expr::ValueToT(_, o) => *o,
 
-        ir::Expr::BinOp(Plus|Minus|Mod, _, _) => Ty::Int,
+        ir::Expr::BinOp(Plus|Minus|Mod|Mul, _, _) => Ty::Int,
         ir::Expr::BinOp(Lt|Gt|Equ|Ne, _, _) => Ty::Bool,
+
+        ir::Expr::FnCall(..) => Ty::Value,
+        ir::Expr::Fn(..) => Ty::Value,
 
         x => todo!("{x:?}")
     }
@@ -92,65 +108,66 @@ fn mk_expr(e: ir::Expr, ctxt: &mut FnCtxt) -> ValueId {
 
 fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt) -> BlkId {
     let old = ctxt.current;
-
     let new = ctxt.fresh_blk();
 
     ctxt.focus_blk(new);
-    for st in stmts {
-        lower_stmt(st, ctxt);
-    }
-    ctxt.set_terminator(Terminator::Goto(ctxt.mk_applied_blk(post)));
 
+    for st in stmts {
+        match st {
+            ast::Stmt::Print(x) => {
+                let v = lower_expr(x, ctxt);
+                ctxt.push_stmt(ir::Stmt::Print(v));
+            },
+            ast::Stmt::If(cond, then_, else_) => {
+                let cond = lower_expr(cond,  ctxt);
+                let cond = mk_expr(ir::Expr::ValueToT(cond, Ty::Bool), ctxt);
+
+                let post = ctxt.fresh_blk();
+
+                let then_ = lower_blk(then_, post, ctxt);
+                let else_ = lower_blk(else_, post, ctxt);
+
+                ctxt.set_terminator(Terminator::IfGoto(cond, ctxt.mk_applied_blk(then_), ctxt.mk_applied_blk(else_)));
+
+                ctxt.focus_blk(post);
+            },
+
+            ast::Stmt::While(cond, body) => {
+                let head = ctxt.fresh_blk();
+                let post = ctxt.fresh_blk();
+
+                ctxt.set_terminator(Terminator::Goto(ctxt.mk_applied_blk(head)));
+
+                let body = lower_blk(body, head, ctxt);
+
+                ctxt.focus_blk(head);
+
+                let cond = lower_expr(cond, ctxt);
+                let cond = mk_expr(ir::Expr::ValueToT(cond, Ty::Bool), ctxt);
+
+                ctxt.set_terminator(Terminator::IfGoto(cond, ctxt.mk_applied_blk(body), ctxt.mk_applied_blk(post)));
+
+                ctxt.focus_blk(post);
+            },
+            ast::Stmt::Assign(var, val) => {
+                let val = lower_expr(val, ctxt);
+
+                let i = var_idx(*var, ctxt);
+                ctxt.blockvars.get_mut(&ctxt.current).unwrap()[i] = val;
+            },
+            ast::Stmt::Return(e) => {
+                let v = lower_expr(e, ctxt);
+                ctxt.set_terminator(Terminator::Return(v));
+                break
+            },
+            x => todo!("{x:?}"),
+        }
+    }
+
+    ctxt.set_terminator(Terminator::Goto(ctxt.mk_applied_blk(post)));
     ctxt.focus_blk(old);
 
     new
-}
-
-fn lower_stmt(stmt: &ast::Stmt, ctxt: &mut FnCtxt) {
-    match stmt {
-        ast::Stmt::Print(x) => {
-            let v = lower_expr(x, ctxt);
-            ctxt.push_stmt(ir::Stmt::Print(v));
-        },
-        ast::Stmt::If(cond, then_, else_) => {
-            let cond = lower_expr(cond,  ctxt);
-            let cond = mk_expr(ir::Expr::ValueToT(cond, Ty::Bool), ctxt);
-
-            let post = ctxt.fresh_blk();
-
-            let then_ = lower_blk(then_, post, ctxt);
-            let else_ = lower_blk(else_, post, ctxt);
-
-            ctxt.set_terminator(Terminator::IfGoto(cond, ctxt.mk_applied_blk(then_), ctxt.mk_applied_blk(else_)));
-
-            ctxt.focus_blk(post);
-        },
-
-        ast::Stmt::While(cond, body) => {
-            let head = ctxt.fresh_blk();
-            let post = ctxt.fresh_blk();
-
-            ctxt.set_terminator(Terminator::Goto(ctxt.mk_applied_blk(head)));
-
-            let body = lower_blk(body, head, ctxt);
-
-            ctxt.focus_blk(head);
-
-            let cond = lower_expr(cond, ctxt);
-            let cond = mk_expr(ir::Expr::ValueToT(cond, Ty::Bool), ctxt);
-
-            ctxt.set_terminator(Terminator::IfGoto(cond, ctxt.mk_applied_blk(body), ctxt.mk_applied_blk(post)));
-
-            ctxt.focus_blk(post);
-        },
-        ast::Stmt::Assign(var, val) => {
-            let val = lower_expr(val, ctxt);
-
-            let i = var_idx(*var, ctxt);
-            ctxt.blockvars.get_mut(&ctxt.current).unwrap()[i] = val;
-        },
-        x => todo!("{x:?}"),
-    }
 }
 
 pub fn lower(ast: &AST) -> IR {

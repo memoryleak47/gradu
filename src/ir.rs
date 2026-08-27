@@ -8,7 +8,7 @@ pub type GlobalId = usize; // global variable id
 
 pub type AppliedBlk = (BlkId, Box<[ValueId]>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct IR {
     pub fns: HashMap<FnId, FnDef>,
     pub start: FnId,

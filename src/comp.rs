@@ -29,13 +29,27 @@ fn comp_expr(e: &Expr, out: &mut String) {
         Expr::IntLit(x) => write!(out, "{x}").unwrap(),
         Expr::BoolLit(b) => write!(out, "{b}").unwrap(),
         Expr::NilLit => write!(out, "(nil) {{}}").unwrap(),
+
         Expr::BinOp(BinOpKind::Plus, x, y) => write!(out, "v_{x} + v_{y}").unwrap(),
+        Expr::BinOp(BinOpKind::Mul, x, y) => write!(out, "v_{x} * v_{y}").unwrap(),
         Expr::BinOp(BinOpKind::Minus, x, y) => write!(out, "v_{x} - v_{y}").unwrap(),
         Expr::BinOp(BinOpKind::Lt, x, y) => write!(out, "v_{x} < v_{y}").unwrap(),
         Expr::BinOp(BinOpKind::Gt, x, y) => write!(out, "v_{x} > v_{y}").unwrap(),
         Expr::BinOp(BinOpKind::Mod, x, y) => write!(out, "v_{x} % v_{y}").unwrap(),
         Expr::BinOp(BinOpKind::Equ, x, y) => write!(out, "is_equal(v_{x}, v_{y})").unwrap(),
         Expr::BinOp(BinOpKind::Ne, x, y) => write!(out, "!is_equal(v_{x}, v_{y})").unwrap(),
+
+        Expr::Fn(f) => write!(out, "f_{f}").unwrap(),
+        Expr::FnCall(f, args) => {
+            write!(out, "v_{f}(").unwrap();
+            for (i, a) in args.iter().enumerate() {
+                write!(out, "v_{a}").unwrap();
+                if i != args.len()-1 {
+                    write!(out, ", ").unwrap();
+                }
+            }
+            write!(out, ")").unwrap();
+        },
 
         Expr::TToValue(x, Ty::String) => write!(out, "str_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Int) => write!(out, "int_to_value(v_{x})").unwrap(),
