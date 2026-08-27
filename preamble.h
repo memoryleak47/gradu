@@ -126,7 +126,7 @@ dict* value_to_dict(Value v) {
 }
 
 void* value_to_fn_with_tag(Value v, int tag) {
-    check(v.tag == tag, "value_to_fn_check_tag failed!");
+    check(v.tag == tag, "value_to_fn_with_tag failed!");
     return v.payload.f;
 }
 
