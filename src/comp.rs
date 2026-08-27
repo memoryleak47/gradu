@@ -99,7 +99,7 @@ fn comp_terminator(terminator: &Terminator, f: FnId, ir: &IR, out: &mut String) 
             comp_goto(&else_, f, ir, out);
             writeln!(out, " }}").unwrap();
         },
-        x => todo!("{x:?}"),
+        Terminator::Return(v) => writeln!(out, "    return v_{v};").unwrap(),
     }
 }
 
@@ -108,7 +108,7 @@ fn compile_ir(ir: &IR) -> String {
     writeln!(&mut out, "#include \"preamble.h\"\n").unwrap();
 
     for (f, fdef) in &ir.fns {
-        writeln!(&mut out, "void fn_{f}() {{").unwrap();
+        writeln!(&mut out, "Value fn_{f}() {{").unwrap();
 
         let startblk = fdef.start;
 

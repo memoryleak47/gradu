@@ -91,7 +91,7 @@ fn mk_expr(e: ir::Expr, ctxt: &mut FnCtxt) -> ValueId {
     fresh
 }
 
-fn lower_blk(stmts: &[ast::Stmt], terminator: Terminator, ctxt: &mut FnCtxt) -> BlkId {
+fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt) -> BlkId {
     let old = ctxt.current;
 
     let new = ctxt.fresh_blk();
@@ -100,7 +100,7 @@ fn lower_blk(stmts: &[ast::Stmt], terminator: Terminator, ctxt: &mut FnCtxt) -> 
     for st in stmts {
         lower_stmt(st, ctxt);
     }
-    ctxt.set_terminator(terminator);
+    ctxt.set_terminator(Terminator::Goto(ctxt.mk_applied_blk(post)));
 
     ctxt.focus_blk(old);
 
@@ -119,8 +119,8 @@ fn lower_stmt(stmt: &ast::Stmt, ctxt: &mut FnCtxt) {
 
             let post = ctxt.fresh_blk();
 
-            let then_ = lower_blk(then_, Terminator::Goto(ctxt.mk_applied_blk(post)), ctxt);
-            let else_ = lower_blk(else_, Terminator::Goto(ctxt.mk_applied_blk(post)), ctxt);
+            let then_ = lower_blk(then_, post, ctxt);
+            let else_ = lower_blk(else_, post, ctxt);
 
             ctxt.set_terminator(Terminator::IfGoto(cond, ctxt.mk_applied_blk(then_), ctxt.mk_applied_blk(else_)));
 
@@ -133,7 +133,7 @@ fn lower_stmt(stmt: &ast::Stmt, ctxt: &mut FnCtxt) {
 
             ctxt.set_terminator(Terminator::Goto(ctxt.mk_applied_blk(head)));
 
-            let body = lower_blk(body, Terminator::Goto(ctxt.mk_applied_blk(head)), ctxt);
+            let body = lower_blk(body, head, ctxt);
 
             ctxt.focus_blk(head);
 
@@ -198,7 +198,10 @@ fn lower_fn(args: &[Symbol], body: &[ast::Stmt], mut ir: IR) -> (FnId, IR) {
     let nil1 = mk_expr(ir::Expr::NilLit, &mut ctxt);
     let nil2 = mk_expr(ir::Expr::TToValue(nil1, Ty::Nil), &mut ctxt);
 
-    let b2 = lower_blk(body, Terminator::Exit, &mut ctxt);
+    let end = ctxt.fresh_blk();
+
+    let b2 = lower_blk(body, end, &mut ctxt);
+
     let app = ctxt.vars.iter().map(|x|
         if let Some(i) = args.iter().position(|y| y == x) {
             args_v[i]
@@ -207,6 +210,12 @@ fn lower_fn(args: &[Symbol], body: &[ast::Stmt], mut ir: IR) -> (FnId, IR) {
         }
     ).collect();
     ctxt.set_terminator(Terminator::Goto((b2, app)));
+
+    // define end block to return Nil
+    ctxt.focus_blk(end);
+    let nil1 = mk_expr(ir::Expr::NilLit, &mut ctxt);
+    let nil2 = mk_expr(ir::Expr::TToValue(nil1, Ty::Nil), &mut ctxt);
+    ctxt.set_terminator(Terminator::Return(nil2));
 
     (fname, ctxt.ir)
 }
