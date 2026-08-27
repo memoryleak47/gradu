@@ -39,7 +39,7 @@ fn comp_expr(e: &Expr, out: &mut String) {
         Expr::BinOp(BinOpKind::Equ, x, y) => write!(out, "is_equal(v_{x}, v_{y})").unwrap(),
         Expr::BinOp(BinOpKind::Ne, x, y) => write!(out, "!is_equal(v_{x}, v_{y})").unwrap(),
 
-        Expr::Fn(f) => write!(out, "f_{f}").unwrap(),
+        Expr::Fn(f) => write!(out, "fn_{f}").unwrap(),
         Expr::FnCall(f, args) => {
             write!(out, "v_{f}(").unwrap();
             for (i, a) in args.iter().enumerate() {
