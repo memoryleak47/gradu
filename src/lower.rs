@@ -71,10 +71,14 @@ fn ty_of(e: &ir::Expr) -> Ty {
         ir::Expr::StringLit(_) => Ty::String,
         ir::Expr::IntLit(_) => Ty::Int,
         ir::Expr::BoolLit(_) => Ty::Bool,
+        ir::Expr::NilLit => Ty::Nil,
+
         ir::Expr::TToValue(_, _) => Ty::Value,
         ir::Expr::ValueToT(_, o) => *o,
+
         ir::Expr::BinOp(Plus|Minus|Mod, _, _) => Ty::Int,
         ir::Expr::BinOp(Lt|Gt|Equ|Ne, _, _) => Ty::Bool,
+
         x => todo!("{x:?}")
     }
 }
@@ -166,42 +170,33 @@ fn var_idx(v: Symbol, ctxt: &FnCtxt) -> usize {
 }
 
 fn lower_fn(args: &[Symbol], body: &[ast::Stmt], mut ir: IR) -> (FnId, IR) {
+    // compute vars.
     let vars = get_vars(args, body);
 
+    // create shallow function.
     let fname = fresh();
+    ir.fns.insert(fname, FnDef { blocks: HashMap::new(), start: usize::MAX });
 
-    let mut blocks = HashMap::new();
-
-    let start = fresh();
-    let nil1 = fresh();
-    let nil2 = fresh();
-
-    let mut types = HashMap::new();
-
-    types.insert(nil1, Ty::Nil);
-    types.insert(nil2, Ty::Value);
-
-    let args_v: Vec<ValueId> = (0..args.len()).map(|_| fresh()).collect();
-
-    blocks.insert(start, BlkDef {
-        args: args_v.clone(),
-        stmts: vec![
-            ir::Stmt::Compute(nil1, ir::Expr::NilLit),
-            ir::Stmt::Compute(nil2, ir::Expr::TToValue(nil1, Ty::Nil)),
-        ],
-        terminator: Terminator::Exit,
-        types,
-    });
-
-    ir.fns.insert(fname, FnDef { blocks, start});
-
+    // create context
     let mut ctxt = FnCtxt {
         blockvars: HashMap::new(),
-        current: start,
+        current: usize::MAX,
         fn_id: fname,
         vars,
         ir,
     };
+
+    // allocate empty start block, and initialize everything to it.
+    let start = ctxt.fresh_argless_blk();
+    ctxt.focus_blk(start);
+    ctxt.get_fdef().start = start;
+
+    // define arguments.
+    let args_v: Vec<ValueId> = args.iter().map(|_| ctxt.fresh_blkarg(Ty::Value)).collect();
+
+    // define "nil".
+    let nil1 = mk_expr(ir::Expr::NilLit, &mut ctxt);
+    let nil2 = mk_expr(ir::Expr::TToValue(nil1, Ty::Nil), &mut ctxt);
 
     let b2 = lower_blk(body, Terminator::Exit, &mut ctxt);
     let app = ctxt.vars.iter().map(|x|
@@ -223,9 +218,15 @@ impl FnCtxt {
         &self.blockvars[&self.current]
     }
 
-    fn get_bdef(&mut self) -> &mut BlkDef {
+    fn get_fdef(&mut self) -> &mut FnDef {
         let fdef = self.ir.fns.get_mut(&self.fn_id).unwrap();
-        fdef.blocks.get_mut(&self.current).unwrap()
+        fdef
+    }
+
+    fn get_bdef(&mut self) -> &mut BlkDef {
+        let current = self.current;
+        let fdef = self.get_fdef();
+        fdef.blocks.get_mut(&current).unwrap()
     }
 
     fn set_terminator(&mut self, terminator: Terminator) {
