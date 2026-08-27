@@ -76,11 +76,29 @@ fn comp_stmt(stmt: &Stmt, ir: &IR, out: &mut String) {
     }
 }
 
-fn comp_terminator(terminator: &Terminator, ir: &IR, out: &mut String) {
+fn comp_goto((bid, args): &AppliedBlk, f: FnId, ir: &IR, out: &mut String) {
+    let args2 = &ir.fns[&f].blocks[&bid].args;
+    for (x, y) in args.iter().zip(args2.iter()) {
+        write!(out, "v_{y} = v_{x}; ").unwrap();
+    }
+    write!(out, "goto bb_{bid};").unwrap();
+}
+
+fn comp_terminator(terminator: &Terminator, f: FnId, ir: &IR, out: &mut String) {
     match terminator {
         Terminator::Exit => writeln!(out, "    exit(0);").unwrap(),
-        Terminator::Goto(x) => writeln!(out, "    goto bb_{};", x.0).unwrap(),
-        Terminator::IfGoto(cond, then_, else_) => writeln!(out, "    if (v_{cond}) goto bb_{}; else goto bb_{};", then_.0, else_.0).unwrap(),
+        Terminator::Goto(x) => {
+            write!(out, "    ").unwrap();
+            comp_goto(&x, f, ir, out);
+            writeln!(out, "").unwrap();
+        },
+        Terminator::IfGoto(cond, then_, else_) => {
+            write!(out, "    if (v_{cond}) {{ ").unwrap();
+            comp_goto(&then_, f, ir, out);
+            write!(out, " }} else {{ ").unwrap();
+            comp_goto(&else_, f, ir, out);
+            writeln!(out, " }}").unwrap();
+        },
         x => todo!("{x:?}"),
     }
 }
@@ -117,7 +135,7 @@ fn compile_ir(ir: &IR) -> String {
             for st in &bdef.stmts {
                 comp_stmt(st, ir, &mut out);
             }
-            comp_terminator(&bdef.terminator, ir, &mut out);
+            comp_terminator(&bdef.terminator, *f, ir, &mut out);
         }
 
 
