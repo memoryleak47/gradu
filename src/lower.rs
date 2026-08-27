@@ -175,7 +175,7 @@ fn lower_fn(args: &[Symbol], body: &[ast::Stmt], mut ir: IR) -> (FnId, IR) {
 
     // create shallow function.
     let fname = fresh();
-    ir.fns.insert(fname, FnDef { blocks: HashMap::new(), start: usize::MAX });
+    ir.fns.insert(fname, FnDef { blocks: HashMap::new(), start: usize::MAX, retty: Ty::Value });
 
     // create context
     let mut ctxt = FnCtxt {

@@ -20,6 +20,7 @@ pub struct IR {
 pub struct FnDef {
     pub blocks: HashMap<BlkId, BlkDef>,
     pub start: BlkId,
+    pub retty: Ty,
     // fn arguments are inherited from the start block.
 }
 

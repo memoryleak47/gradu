@@ -108,7 +108,8 @@ fn compile_ir(ir: &IR) -> String {
     writeln!(&mut out, "#include \"preamble.h\"\n").unwrap();
 
     for (f, fdef) in &ir.fns {
-        writeln!(&mut out, "Value fn_{f}() {{").unwrap();
+        let retty = ty_str(&fdef.retty);
+        writeln!(&mut out, "{retty} fn_{f}() {{").unwrap();
 
         let startblk = fdef.start;
 
