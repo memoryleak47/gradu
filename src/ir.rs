@@ -115,10 +115,21 @@ impl IR {
                                 Expr::TToValue(v, ty) => print!("({ty:?} -> Value)(v_{v})"),
                                 Expr::ValueToT(v, ty) => print!("(Value -> {ty:?})(v_{v})"),
                                 Expr::BinOp(kind, l, r) => print!("v_{l} {} v_{r}", binop_str(*kind)),
+                                Expr::FnCall(f, args) => {
+                                    print!("v_{f}(");
+                                    for (i, a) in args.iter().enumerate() {
+                                        print!("v_{a}");
+                                        if i != args.len()-1 {
+                                            print!(", ");
+                                        }
+                                    }
+                                    print!(")");
+                                },
                                 x => print!("{x:?}"),
                             }
-                            println!("");
+                            println!(";");
                         },
+                        Stmt::Print(x) => println!("    print(v_{x});"),
                         x => println!("    {x:?}"),
                     }
                 }
@@ -137,18 +148,33 @@ impl IR {
                     Terminator::Goto(t) => {
                         print!("    ");
                         dump_goto(t);
-                        println!("");
+                        println!(";");
                     },
                     Terminator::IfGoto(cond, x, y) => {
                         print!("    if v_{cond}: ");
                         dump_goto(x);
                         print!(" else ");
                         dump_goto(y);
-                        println!("");
+                        println!(";");
                     },
-                    Terminator::Exit => println!("    exit"),
-                    Terminator::Return(v) => println!("    return v_{v}"),
+                    Terminator::Exit => println!("    exit;"),
+                    Terminator::Return(v) => println!("    return v_{v};"),
                 }
+            }
+            println!();
+        }
+    }
+
+    pub fn check(&self) {
+        for (f, fdef) in &self.fns {
+            for (b, bdef) in &fdef.blocks {
+                let mut vs: HashSet<ValueId> = HashSet::new();
+                vs.extend(&bdef.args);
+                for st in &bdef.stmts {
+                    for x in in_vals_stmt(st) { assert!(vs.contains(&x)); }
+                    if let Stmt::Compute(x, _) = st { vs.insert(*x); }
+                }
+                for x in in_vals_terminator(&bdef.terminator) { assert!(vs.contains(&x)); }
             }
         }
     }
@@ -165,5 +191,36 @@ fn binop_str(kind: BinOpKind) -> &'static str {
         Equ => "==",
         Ne => "!=",
         Mod => "%",
+    }
+}
+
+fn in_vals(e: &Expr) -> Vec<ValueId> {
+    use Expr::*;
+    match e {
+        FnCall(v, vs) => std::iter::once(*v).chain(vs.iter().copied()).collect(),
+        IndexList(v1, v2)|IndexDict(v1, v2)|BinOp(_, v1, v2) => vec![*v1, *v2],
+        TToValue(v, _)|ValueToT(v, _)|Length(v) => vec![*v],
+        Fn(_)|NewList|NewDict| Input|LoadGlobal(_)|IntLit(_)|StringLit(_)|BoolLit(_)|NilLit => Vec::new(),
+    }
+}
+
+fn in_vals_stmt(st: &Stmt) -> Vec<ValueId> {
+    use Stmt::*;
+    match st {
+        Compute(_, e) => in_vals(e),
+        Push(v1, v2) => vec![*v1, *v2],
+        ListStore(v1, v2, v3) => vec![*v1, *v2, *v3],
+        DictStore(v1, v2, v3) => vec![*v1, *v2, *v3],
+        WriteGlobal(_, v)|Print(v) => vec![*v],
+    }
+}
+
+fn in_vals_terminator(t: &Terminator) -> Vec<ValueId> {
+    use Terminator::*;
+    match t {
+        Exit => Vec::new(),
+        Return(v) => vec![*v],
+        Goto((_, args)) => args.iter().copied().collect(),
+        IfGoto(v, (_, args1), (_, args2)) => std::iter::once(*v).chain(args1.iter().copied()).chain(args2.iter().copied()).collect(),
     }
 }
