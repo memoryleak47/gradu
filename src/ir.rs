@@ -95,7 +95,14 @@ impl IR {
             println!("fn fn_{f}:");
             for (b, bdef) in &fdef.blocks {
                 let startstr = if *b == fdef.start { "start " } else { "" };
-                println!("  {startstr}bb_{b}:");
+                print!("  {startstr}bb_{b}(");
+                for (i, a) in bdef.args.iter().enumerate() {
+                    print!("v_{a}");
+                    if i != bdef.args.len()-1 {
+                        print!(", ");
+                    }
+                }
+                println!("):");
                 for st in &bdef.stmts {
                     match st {
                         Stmt::Compute(n, e) => println!("    v_{n} = {e:?}"),
