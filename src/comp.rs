@@ -148,12 +148,14 @@ fn compile_fn(f: FnId, fdef: &FnDef, out: &mut String, ir: &IR) {
     let startblk = fdef.start;
 
     // forward declarations:
+    write!(out, " ").unwrap();
     for (_, bdef) in &fdef.blocks {
         for (var, ty) in &bdef.types {
             let ty = ty_str(ty);
-            writeln!(out, "  {ty} v_{var};").unwrap();
+            write!(out, " {ty} v_{var};").unwrap();
         }
     }
+    writeln!(out, "").unwrap();
 
     write!(out, "  ").unwrap();
     for (i, a) in fdef.blocks[&startblk].args.iter().enumerate() {
