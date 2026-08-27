@@ -175,6 +175,7 @@ fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt, gctxt: &mut Ve
                 terminator_defined = true;
                 break
             },
+            ast::Stmt::Global(_) => {}, // The Global stmt is respected in "get_vars", thus it can be ignored here.
             x => todo!("{x:?}"),
         }
     }
