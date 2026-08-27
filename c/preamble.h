@@ -152,4 +152,15 @@ Value fail(char* s) {
     exit(1);
 }
 
+#define __T__ Value
+#include "list.h"
+#undef __T__
+
+#define __K__ Value
+#define __V__ Value
+#include "dict.h"
+#undef __K__
+#undef __V__
+
+
 // </preamble.h>

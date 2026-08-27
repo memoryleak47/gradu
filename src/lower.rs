@@ -53,6 +53,10 @@ fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> Valu
             let a = mk_expr(ir::Expr::BoolLit(*x), ctxt);
             ir::Expr::TToValue(a, Ty::Bool)
         },
+        ast::Expr::NewList => {
+            let a = mk_expr(ir::Expr::NewList, ctxt);
+            ir::Expr::TToValue(a, Ty::List)
+        },
         ast::Expr::BinOp(kind, l, r) => {
             let l = lower_expr(l, ctxt, gctxt);
             let r = lower_expr(r, ctxt, gctxt);
@@ -81,6 +85,15 @@ fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> Valu
             let f = mk_expr(ir::Expr::ValueToT(f, Ty::Fn), ctxt);
             ir::Expr::FnCall(f, args.into())
         },
+        ast::Expr::IndexList(l, i) => {
+            let l = lower_expr(l, ctxt, gctxt);
+            let l = mk_expr(ir::Expr::ValueToT(l, Ty::List), ctxt);
+
+            let i = lower_expr(i, ctxt, gctxt);
+            let i = mk_expr(ir::Expr::ValueToT(i, Ty::Int), ctxt);
+
+            ir::Expr::IndexList(l, i)
+        },
         x => todo!("{x:?}"),
     };
 
@@ -105,6 +118,8 @@ fn ty_of(e: &ir::Expr) -> Ty {
         ir::Expr::Fn(..) => Ty::Fn,
 
         ir::Expr::LoadGlobal(..) => Ty::Value,
+        ir::Expr::NewList => Ty::List,
+        ir::Expr::IndexList(..) => Ty::Value,
 
         x => todo!("{x:?}")
     }
@@ -180,6 +195,23 @@ fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt, gctxt: &mut Ve
                 break
             },
             ast::Stmt::Global(_) => {}, // The Global stmt is respected in "get_vars", thus it can be ignored here.
+            ast::Stmt::Push(l, v) => {
+                let l = lower_expr(l, ctxt, gctxt);
+                let l = mk_expr(ir::Expr::ValueToT(l, Ty::List), ctxt);
+                let v = lower_expr(v, ctxt, gctxt);
+                ctxt.push_stmt(ir::Stmt::Push(l, v));
+            },
+            ast::Stmt::ListStore(l, i, v) => {
+                let l = lower_expr(l, ctxt, gctxt);
+                let l = mk_expr(ir::Expr::ValueToT(l, Ty::List), ctxt);
+
+                let i = lower_expr(i, ctxt, gctxt);
+                let i = mk_expr(ir::Expr::ValueToT(i, Ty::Int), ctxt);
+
+                let v = lower_expr(v, ctxt, gctxt);
+
+                ctxt.push_stmt(ir::Stmt::ListStore(l, i, v));
+            },
             x => todo!("{x:?}"),
         }
     }

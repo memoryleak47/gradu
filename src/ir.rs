@@ -87,6 +87,7 @@ pub enum Ty {
     Fn,
     Bool,
     Nil,
+    List,
 }
 
 impl IR {

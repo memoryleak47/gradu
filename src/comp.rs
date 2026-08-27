@@ -12,7 +12,7 @@ pub fn comp(ir: &IR) {
     let exe_c = &format!("{root}/exe.c");
 
     std::fs::write(exe_c, compiled).unwrap();
-    let co = Command::new("gcc").args([exe_c, "-o", exe, "-O3"]).output().unwrap().stderr;
+    let co = Command::new("gcc").args([exe_c, "-o", exe, "-I", &format!("{root}/c"), "-O3"]).output().unwrap().stderr;
     let co2 = String::from_utf8_lossy(&co);
     if !co2.is_empty() {
         println!("compiler error: {co2:?}");
@@ -59,18 +59,22 @@ fn comp_expr(e: &Expr, out: &mut String) {
         },
 
         Expr::LoadGlobal(i) => write!(out, "g_{i}").unwrap(),
+        Expr::NewList => write!(out, "new_list()").unwrap(),
+        Expr::IndexList(l, i) => write!(out, "index_list(v_{l}, v_{i})").unwrap(),
 
         Expr::TToValue(x, Ty::String) => write!(out, "str_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Int) => write!(out, "int_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Bool) => write!(out, "bool_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Nil) => write!(out, "nil_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Fn) => write!(out, "tagged_fn_to_value(v_{x}, 20)").unwrap(),
+        Expr::TToValue(x, Ty::List) => write!(out, "list_to_value(v_{x})").unwrap(),
 
         Expr::ValueToT(x, Ty::String) => write!(out, "value_to_str(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Int) => write!(out, "value_to_int(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Bool) => write!(out, "value_to_bool(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Nil) => write!(out, "value_to_nil(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Fn) => write!(out, "value_to_fn_with_tag(v_{x}, 20)").unwrap(),
+        Expr::ValueToT(x, Ty::List) => write!(out, "value_to_list(v_{x})").unwrap(),
 
         x => todo!("{x:?}"),
     }
@@ -84,6 +88,7 @@ fn ty_str(x: &Ty) -> &str {
         Ty::Bool => "bool",
         Ty::Nil => "nil",
         Ty::Fn => "void*",
+        Ty::List => "list*",
     }
 }
 
@@ -98,6 +103,8 @@ fn comp_stmt(stmt: &Stmt, ir: &IR, out: &mut String) {
             writeln!(out, ";").unwrap();
         },
         Stmt::WriteGlobal(gid, v) => writeln!(out, "    g_{gid} = v_{v};").unwrap(),
+        Stmt::Push(l, v) => writeln!(out, "    push_list(v_{l}, v_{v});").unwrap(),
+        Stmt::ListStore(l, i, v) => writeln!(out, "    store_list(v_{l}, v_{i}, v_{v});").unwrap(),
         x => todo!("{x:?}"),
     }
 }
