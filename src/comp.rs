@@ -126,9 +126,24 @@ fn comp_terminator(terminator: &Terminator, f: FnId, ir: &IR, out: &mut String) 
     }
 }
 
-fn compile_fn(f: FnId, fdef: &FnDef, out: &mut String, ir: &IR) {
+fn write_fn_head(f: FnId, fdef: &FnDef, out: &mut String) {
     let retty = ty_str(&fdef.retty);
-    writeln!(out, "{retty} fn_{f}() {{").unwrap();
+    write!(out, "{retty} fn_{f}(").unwrap();
+    let start = &fdef.start;
+    let bdef = &fdef.blocks[&start];
+    let args = &bdef.args;
+    for (i, a) in args.iter().enumerate() {
+        write!(out, "Value a_{i}").unwrap();
+        if i != args.len()-1 {
+            write!(out, ", ").unwrap();
+        }
+    }
+    write!(out, ")").unwrap();
+}
+
+fn compile_fn(f: FnId, fdef: &FnDef, out: &mut String, ir: &IR) {
+    write_fn_head(f, fdef, out);
+    writeln!(out, " {{").unwrap();
 
     let startblk = fdef.start;
 
@@ -140,7 +155,11 @@ fn compile_fn(f: FnId, fdef: &FnDef, out: &mut String, ir: &IR) {
         }
     }
 
-    writeln!(out, "  goto bb_{startblk};").unwrap();
+    write!(out, "  ").unwrap();
+    for (i, a) in fdef.blocks[&startblk].args.iter().enumerate() {
+        write!(out, "v_{a} = a_{i}; ").unwrap();
+    }
+    writeln!(out, "goto bb_{startblk};").unwrap();
 
     // stmts of the block.
     for (b, bdef) in &fdef.blocks {
@@ -167,8 +186,8 @@ fn compile_ir(ir: &IR) -> String {
 
     // fn forward declarations
     for (f, fdef) in &ir.fns {
-        let retty = ty_str(&fdef.retty);
-        writeln!(&mut out, "{retty} fn_{f}();").unwrap();
+        write_fn_head(*f, fdef, &mut out);
+        writeln!(&mut out, ";").unwrap();
     }
 
     for (f, fdef) in &ir.fns {
