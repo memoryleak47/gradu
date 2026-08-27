@@ -266,10 +266,11 @@ impl FnCtxt {
         let new = self.fresh_argless_blk();
         self.focus_blk(new);
 
+        let mut blockvars = Vec::new();
         for x in self.vars.clone() {
-            let v = self.fresh_blkarg(Ty::Value);
-            self.blockvars.get_mut(&new).unwrap().push(v);
+            blockvars.push(self.fresh_blkarg(Ty::Value));
         }
+        self.blockvars.insert(new, blockvars);
 
         self.focus_blk(old);
 
