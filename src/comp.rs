@@ -41,7 +41,14 @@ fn comp_expr(e: &Expr, out: &mut String) {
 
         Expr::Fn(f) => write!(out, "fn_{f}").unwrap(),
         Expr::FnCall(f, args) => {
-            write!(out, "v_{f}(").unwrap();
+            write!(out, "((Value (*)(").unwrap();
+            for i in 0..args.len() {
+                write!(out, "Value").unwrap();
+                if i != args.len()-1 {
+                    write!(out, ", ").unwrap();
+                }
+            }
+            write!(out, ")) v_{f})(").unwrap();
             for (i, a) in args.iter().enumerate() {
                 write!(out, "v_{a}").unwrap();
                 if i != args.len()-1 {
@@ -55,11 +62,13 @@ fn comp_expr(e: &Expr, out: &mut String) {
         Expr::TToValue(x, Ty::Int) => write!(out, "int_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Bool) => write!(out, "bool_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Nil) => write!(out, "nil_to_value(v_{x})").unwrap(),
+        Expr::TToValue(x, Ty::Fn) => write!(out, "tagged_fn_to_value(v_{x}, 20)").unwrap(),
 
         Expr::ValueToT(x, Ty::String) => write!(out, "value_to_str(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Int) => write!(out, "value_to_int(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Bool) => write!(out, "value_to_bool(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Nil) => write!(out, "value_to_nil(v_{x})").unwrap(),
+        Expr::ValueToT(x, Ty::Fn) => write!(out, "value_to_fn_with_tag(v_{x}, 20)").unwrap(),
 
         x => todo!("{x:?}"),
     }
@@ -120,6 +129,12 @@ fn comp_terminator(terminator: &Terminator, f: FnId, ir: &IR, out: &mut String) 
 fn compile_ir(ir: &IR) -> String {
     let mut out = String::new();
     writeln!(&mut out, "#include \"preamble.h\"\n").unwrap();
+
+    // fn forward declarations
+    for (f, fdef) in &ir.fns {
+        let retty = ty_str(&fdef.retty);
+        writeln!(&mut out, "{retty} fn_{f}();").unwrap();
+    }
 
     for (f, fdef) in &ir.fns {
         let retty = ty_str(&fdef.retty);

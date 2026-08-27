@@ -63,12 +63,14 @@ fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt) -> ValueId {
             let (f, ir) = lower_fn(args, body, ir);
             ctxt.ir = ir;
 
-            ir::Expr::Fn(f)
+            let a = mk_expr(ir::Expr::Fn(f), ctxt);
+            ir::Expr::TToValue(a, Ty::Fn)
         },
         ast::Expr::FnCall(f, args) => {
             let f = lower_expr(f, ctxt);
             let args: Vec<_> = args.iter().map(|x| lower_expr(x, ctxt)).collect();
 
+            let f = mk_expr(ir::Expr::ValueToT(f, Ty::Fn), ctxt);
             ir::Expr::FnCall(f, args.into())
         },
         x => todo!("{x:?}"),
@@ -92,7 +94,7 @@ fn ty_of(e: &ir::Expr) -> Ty {
         ir::Expr::BinOp(Lt|Gt|Equ|Ne, _, _) => Ty::Bool,
 
         ir::Expr::FnCall(..) => Ty::Value,
-        ir::Expr::Fn(..) => Ty::Value,
+        ir::Expr::Fn(..) => Ty::Fn,
 
         x => todo!("{x:?}")
     }
