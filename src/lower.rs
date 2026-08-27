@@ -16,7 +16,7 @@ fn lower_binop(kind: BinOpKind, l: ValueId, r: ValueId, ctxt: &mut FnCtxt) -> ir
     use BinOpKind::*;
 
     match kind {
-        Plus|Minus|Mod => {
+        Plus|Mul|Minus|Mod => {
             let l = mk_expr(ir::Expr::ValueToT(l, Ty::Int), ctxt);
             let r = mk_expr(ir::Expr::ValueToT(r, Ty::Int), ctxt);
             let o = mk_expr(ir::Expr::BinOp(kind, l, r), ctxt);
@@ -32,7 +32,6 @@ fn lower_binop(kind: BinOpKind, l: ValueId, r: ValueId, ctxt: &mut FnCtxt) -> ir
             let o = mk_expr(ir::Expr::BinOp(kind, l, r), ctxt);
             ir::Expr::TToValue(o, Ty::Bool)
         },
-        x => todo!("{x:?}"),
     }
 }
 
