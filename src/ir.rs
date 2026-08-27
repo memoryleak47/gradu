@@ -105,7 +105,20 @@ impl IR {
                 println!("):");
                 for st in &bdef.stmts {
                     match st {
-                        Stmt::Compute(n, e) => println!("    v_{n} = {e:?}"),
+                        Stmt::Compute(n, e) => {
+                            print!("    v_{n} = ");
+                            match e {
+                                Expr::Fn(f) => print!("f_{f}"),
+                                Expr::NilLit => print!("nil"),
+                                Expr::IntLit(i) => print!("{i}"),
+                                Expr::BoolLit(b) => print!("{b}"),
+                                Expr::TToValue(v, ty) => print!("({ty:?} -> Value)(v_{v})"),
+                                Expr::ValueToT(v, ty) => print!("(Value -> {ty:?})(v_{v})"),
+                                Expr::BinOp(kind, l, r) => print!("v_{l} {} v_{r}", binop_str(*kind)),
+                                x => print!("{x:?}"),
+                            }
+                            println!("");
+                        },
                         x => println!("    {x:?}"),
                     }
                 }
@@ -138,5 +151,19 @@ impl IR {
                 }
             }
         }
+    }
+}
+
+fn binop_str(kind: BinOpKind) -> &'static str {
+    use BinOpKind::*;
+    match kind {
+        Plus => "+",
+        Minus => "-",
+        Mul => "*",
+        Lt => "<",
+        Gt => "<",
+        Equ => "==",
+        Ne => "!=",
+        Mod => "%",
     }
 }
