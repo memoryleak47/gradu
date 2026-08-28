@@ -27,4 +27,3 @@ do
         echo "$b"
     fi
 done
-    
