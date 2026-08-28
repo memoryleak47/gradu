@@ -114,7 +114,6 @@ fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> Valu
             ir::Expr::IndexDict(d, k)
         },
         ast::Expr::Input => ir::Expr::Input,
-        x => todo!("{x:?}"),
     };
 
     mk_expr(e, ctxt)
@@ -144,8 +143,6 @@ fn ty_of(e: &ir::Expr) -> Ty {
         ir::Expr::IndexDict(..) => Ty::Value,
         ir::Expr::Length(..) => Ty::Int,
         ir::Expr::Input => Ty::Value,
-
-        x => todo!("{x:?}")
     }
 }
 
@@ -245,7 +242,6 @@ fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt, gctxt: &mut Ve
 
                 ctxt.push_stmt(ir::Stmt::DictStore(d, k, v));
             },
-            x => todo!("{x:?}"),
         }
     }
 
