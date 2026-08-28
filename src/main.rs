@@ -10,6 +10,9 @@ pub use ir::IR;
 mod lower;
 pub use lower::*;
 
+mod optimize;
+pub use optimize::*;
+
 mod fresh;
 pub use fresh::*;
 
@@ -31,7 +34,9 @@ fn main() {
     let s = std::fs::read_to_string(path).unwrap();
 
     let ast = parse(&s);
-    let ir = lower(&ast);
+    let mut ir = lower(&ast);
+    ir.check();
+    while optimize(&mut ir) {};
     ir.check();
     comp(&ir);
 }
