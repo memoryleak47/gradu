@@ -60,7 +60,9 @@ fn comp_expr(e: &Expr, out: &mut String) {
 
         Expr::LoadGlobal(i) => write!(out, "g_{i}").unwrap(),
         Expr::NewList => write!(out, "new_list()").unwrap(),
+        Expr::NewDict => write!(out, "new_dict()").unwrap(),
         Expr::IndexList(l, i) => write!(out, "index_list(v_{l}, v_{i})").unwrap(),
+        Expr::IndexDict(d, k) => write!(out, "index_dict(v_{d}, v_{k})").unwrap(),
         Expr::Length(l) => write!(out, "length(v_{l})").unwrap(),
         Expr::Input => write!(out, "input()").unwrap(),
 
@@ -70,6 +72,7 @@ fn comp_expr(e: &Expr, out: &mut String) {
         Expr::TToValue(x, Ty::Nil) => write!(out, "nil_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Fn) => write!(out, "tagged_fn_to_value(v_{x}, 20)").unwrap(),
         Expr::TToValue(x, Ty::List) => write!(out, "list_to_value(v_{x})").unwrap(),
+        Expr::TToValue(x, Ty::Dict) => write!(out, "dict_to_value(v_{x})").unwrap(),
 
         Expr::ValueToT(x, Ty::String) => write!(out, "value_to_str(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Int) => write!(out, "value_to_int(v_{x})").unwrap(),
@@ -77,6 +80,7 @@ fn comp_expr(e: &Expr, out: &mut String) {
         Expr::ValueToT(x, Ty::Nil) => write!(out, "value_to_nil(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Fn) => write!(out, "value_to_fn_with_tag(v_{x}, 20)").unwrap(),
         Expr::ValueToT(x, Ty::List) => write!(out, "value_to_list(v_{x})").unwrap(),
+        Expr::ValueToT(x, Ty::Dict) => write!(out, "value_to_dict(v_{x})").unwrap(),
 
         x => todo!("{x:?}"),
     }
@@ -91,6 +95,7 @@ fn ty_str(x: &Ty) -> &str {
         Ty::Nil => "nil",
         Ty::Fn => "void*",
         Ty::List => "list*",
+        Ty::Dict => "dict*",
     }
 }
 
@@ -107,7 +112,7 @@ fn comp_stmt(stmt: &Stmt, ir: &IR, out: &mut String) {
         Stmt::WriteGlobal(gid, v) => writeln!(out, "    g_{gid} = v_{v};").unwrap(),
         Stmt::Push(l, v) => writeln!(out, "    push_list(v_{l}, v_{v});").unwrap(),
         Stmt::ListStore(l, i, v) => writeln!(out, "    store_list(v_{l}, v_{i}, v_{v});").unwrap(),
-        x => todo!("{x:?}"),
+        Stmt::DictStore(d, k, v) => writeln!(out, "    store_dict(v_{d}, v_{k}, v_{v});").unwrap(),
     }
 }
 

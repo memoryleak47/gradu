@@ -57,6 +57,10 @@ fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> Valu
             let a = mk_expr(ir::Expr::NewList, ctxt);
             ir::Expr::TToValue(a, Ty::List)
         },
+        ast::Expr::NewDict => {
+            let a = mk_expr(ir::Expr::NewDict, ctxt);
+            ir::Expr::TToValue(a, Ty::Dict)
+        },
         ast::Expr::BinOp(kind, l, r) => {
             let l = lower_expr(l, ctxt, gctxt);
             let r = lower_expr(r, ctxt, gctxt);
@@ -101,6 +105,14 @@ fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> Valu
             let out = mk_expr(ir::Expr::Length(l), ctxt);
             ir::Expr::TToValue(out, Ty::Int)
         },
+        ast::Expr::IndexDict(d, k) => {
+            let d = lower_expr(d, ctxt, gctxt);
+            let d = mk_expr(ir::Expr::ValueToT(d, Ty::Dict), ctxt);
+
+            let k = lower_expr(k, ctxt, gctxt);
+
+            ir::Expr::IndexDict(d, k)
+        },
         ast::Expr::Input => ir::Expr::Input,
         x => todo!("{x:?}"),
     };
@@ -127,7 +139,9 @@ fn ty_of(e: &ir::Expr) -> Ty {
 
         ir::Expr::LoadGlobal(..) => Ty::Value,
         ir::Expr::NewList => Ty::List,
+        ir::Expr::NewDict => Ty::Dict,
         ir::Expr::IndexList(..) => Ty::Value,
+        ir::Expr::IndexDict(..) => Ty::Value,
         ir::Expr::Length(..) => Ty::Int,
         ir::Expr::Input => Ty::Value,
 
@@ -221,6 +235,15 @@ fn lower_blk(stmts: &[ast::Stmt], post: BlkId, ctxt: &mut FnCtxt, gctxt: &mut Ve
                 let v = lower_expr(v, ctxt, gctxt);
 
                 ctxt.push_stmt(ir::Stmt::ListStore(l, i, v));
+            },
+            ast::Stmt::DictStore(d, k, v) => {
+                let d = lower_expr(d, ctxt, gctxt);
+                let d = mk_expr(ir::Expr::ValueToT(d, Ty::Dict), ctxt);
+
+                let k = lower_expr(k, ctxt, gctxt);
+                let v = lower_expr(v, ctxt, gctxt);
+
+                ctxt.push_stmt(ir::Stmt::DictStore(d, k, v));
             },
             x => todo!("{x:?}"),
         }
