@@ -79,7 +79,7 @@ pub enum Terminator {
     IfGoto(/*cond*/ ValueId, /*then*/ AppliedBlk, /*else*/ AppliedBlk),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Ty {
     Value,
     Int,
@@ -176,10 +176,10 @@ impl IR {
                 let mut vs: HashSet<ValueId> = HashSet::new();
                 vs.extend(&bdef.args);
                 for st in &bdef.stmts {
-                    for x in in_vals_stmt(st) { assert!(vs.contains(&x)); }
+                    for x in in_vals_stmt(&mut st.clone()) { assert!(vs.contains(x)); }
                     if let Stmt::Compute(x, _) = st { vs.insert(*x); }
                 }
-                for x in in_vals_terminator(&bdef.terminator) { assert!(vs.contains(&x)); }
+                for x in in_vals_terminator(&mut bdef.terminator.clone()) { assert!(vs.contains(&x)); }
             }
         }
     }
@@ -199,33 +199,33 @@ fn binop_str(kind: BinOpKind) -> &'static str {
     }
 }
 
-fn in_vals(e: &Expr) -> Vec<ValueId> {
+pub fn in_vals(e: &mut Expr) -> Vec<&mut ValueId> {
     use Expr::*;
     match e {
-        FnCall(v, vs) => std::iter::once(*v).chain(vs.iter().copied()).collect(),
-        IndexList(v1, v2)|IndexDict(v1, v2)|BinOp(_, v1, v2) => vec![*v1, *v2],
-        TToValue(v, _)|ValueToT(v, _)|Length(v) => vec![*v],
+        FnCall(v, vs) => std::iter::once(v).chain(vs.iter_mut()).collect(),
+        IndexList(v1, v2)|IndexDict(v1, v2)|BinOp(_, v1, v2) => vec![v1, v2],
+        TToValue(v, _)|ValueToT(v, _)|Length(v) => vec![v],
         Fn(_)|NewList|NewDict| Input|LoadGlobal(_)|IntLit(_)|StringLit(_)|BoolLit(_)|NilLit => Vec::new(),
     }
 }
 
-fn in_vals_stmt(st: &Stmt) -> Vec<ValueId> {
+pub fn in_vals_stmt(st: &mut Stmt) -> Vec<&mut ValueId> {
     use Stmt::*;
     match st {
         Compute(_, e) => in_vals(e),
-        Push(v1, v2) => vec![*v1, *v2],
-        ListStore(v1, v2, v3) => vec![*v1, *v2, *v3],
-        DictStore(v1, v2, v3) => vec![*v1, *v2, *v3],
-        WriteGlobal(_, v)|Print(v) => vec![*v],
+        Push(v1, v2) => vec![v1, v2],
+        ListStore(v1, v2, v3) => vec![v1, v2, v3],
+        DictStore(v1, v2, v3) => vec![v1, v2, v3],
+        WriteGlobal(_, v)|Print(v) => vec![v],
     }
 }
 
-fn in_vals_terminator(t: &Terminator) -> Vec<ValueId> {
+pub fn in_vals_terminator(t: &mut Terminator) -> Vec<&mut ValueId> {
     use Terminator::*;
     match t {
         Exit => Vec::new(),
-        Return(v) => vec![*v],
-        Goto((_, args)) => args.iter().copied().collect(),
-        IfGoto(v, (_, args1), (_, args2)) => std::iter::once(*v).chain(args1.iter().copied()).chain(args2.iter().copied()).collect(),
+        Return(v) => vec![v],
+        Goto((_, args)) => args.iter_mut().collect(),
+        IfGoto(v, (_, args1), (_, args2)) => std::iter::once(v).chain(args1.iter_mut()).chain(args2.iter_mut()).collect(),
     }
 }
