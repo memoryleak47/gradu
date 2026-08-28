@@ -1,6 +1,6 @@
 use crate::*;
 
-use std::collections::{BTreeSet, BTreeMap};
+use std::collections::BTreeSet;
 use crate::ir::{Terminator, BlkDef, FnDef, ValueId, GlobalId, Ty, BlkId, FnId, AppliedBlk};
 
 // The context that governs lowering a particular function.
@@ -75,7 +75,7 @@ fn lower_expr(e: &ast::Expr, ctxt: &mut FnCtxt, gctxt: &mut Vec<Symbol>) -> Valu
             }
         },
         ast::Expr::Fn(args, body) => {
-            let mut ir = std::mem::take(&mut ctxt.ir);
+            let ir = std::mem::take(&mut ctxt.ir);
             let (f, ir) = lower_fn(false, args, body, ir, gctxt);
             ctxt.ir = ir;
 

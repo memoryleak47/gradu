@@ -73,7 +73,7 @@ fn comp_expr(e: &Expr, out: &mut String) {
         Expr::TToValue(x, Ty::Fn) => write!(out, "tagged_fn_to_value(v_{x}, 20)").unwrap(),
         Expr::TToValue(x, Ty::List) => write!(out, "list_to_value(v_{x})").unwrap(),
         Expr::TToValue(x, Ty::Dict) => write!(out, "dict_to_value(v_{x})").unwrap(),
-        Expr::TToValue(x, Ty::Value) => unreachable!(),
+        Expr::TToValue(_, Ty::Value) => unreachable!(),
 
         Expr::ValueToT(x, Ty::String) => write!(out, "value_to_str(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Int) => write!(out, "value_to_int(v_{x})").unwrap(),
@@ -82,7 +82,7 @@ fn comp_expr(e: &Expr, out: &mut String) {
         Expr::ValueToT(x, Ty::Fn) => write!(out, "value_to_fn_with_tag(v_{x}, 20)").unwrap(),
         Expr::ValueToT(x, Ty::List) => write!(out, "value_to_list(v_{x})").unwrap(),
         Expr::ValueToT(x, Ty::Dict) => write!(out, "value_to_dict(v_{x})").unwrap(),
-        Expr::ValueToT(x, Ty::Value) => unreachable!(),
+        Expr::ValueToT(_, Ty::Value) => unreachable!(),
     }
 }
 
@@ -99,7 +99,7 @@ fn ty_str(x: &Ty) -> &str {
     }
 }
 
-fn comp_stmt(stmt: &Stmt, ir: &IR, out: &mut String) {
+fn comp_stmt(stmt: &Stmt, out: &mut String) {
     match stmt {
         Stmt::Print(x) => {
             writeln!(out, "    print_value(v_{x});").unwrap()
@@ -149,7 +149,7 @@ fn write_fn_head(f: FnId, fdef: &FnDef, out: &mut String) {
     let start = &fdef.start;
     let bdef = &fdef.blocks[&start];
     let args = &bdef.args;
-    for (i, a) in args.iter().enumerate() {
+    for i in 0..args.len() {
         write!(out, "Value a_{i}").unwrap();
         if i != args.len()-1 {
             write!(out, ", ").unwrap();
@@ -191,7 +191,7 @@ fn compile_fn(f: FnId, fdef: &FnDef, out: &mut String, ir: &IR) {
         }
         write!(out, "\n").unwrap();
         for st in &bdef.stmts {
-            comp_stmt(st, ir, out);
+            comp_stmt(st, out);
         }
         comp_terminator(&bdef.terminator, f, ir, out);
     }

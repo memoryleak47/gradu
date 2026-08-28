@@ -171,8 +171,8 @@ impl IR {
     }
 
     pub fn check(&self) {
-        for (f, fdef) in &self.fns {
-            for (b, bdef) in &fdef.blocks {
+        for (_, fdef) in &self.fns {
+            for (_, bdef) in &fdef.blocks {
                 let mut vs: HashSet<ValueId> = HashSet::new();
                 vs.extend(&bdef.args);
                 for st in &bdef.stmts {
