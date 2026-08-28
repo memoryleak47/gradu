@@ -84,3 +84,40 @@ fn is_side_effect_free(e: &Expr) -> bool {
         TToValue(..)|NilLit|BoolLit(..)|StringLit(..)|IntLit(..)|Length(..)|BinOp(..)|LoadGlobal(..)|Fn(_)|NewList|NewDict => true,
     }
 }
+
+// abstract interpretation:
+
+enum Location {
+    Local(ValueId),
+    Global(GlobalId),
+    Ret(FnId),
+}
+
+struct AbstractValue {
+    string: bool,
+    int: bool,
+    nil: bool,
+    fns: HashSet<FnId>,
+    dict: bool,
+    list: bool,
+}
+
+type AIState = HashMap<Location, AbstractValue>;
+
+fn abstract_interpretation(ir: &IR) -> AIState {
+    let mut state = AIState::default();
+    let fstart = ir.start;
+    let fdef = &ir.fns[&fstart];
+    let bstart = fdef.start;
+    ai_run(bstart, fstart, ir, &mut state);
+    state
+}
+
+fn ai_run(bid: BlkId, fid: FnId, ir: &IR, state: &mut AIState) {
+    let bdef = &ir.fns[&fid].blocks[&bid];
+    for st in &bdef.stmts {
+        match st {
+            x => todo!("{x:?}"),
+        }
+    }
+}
