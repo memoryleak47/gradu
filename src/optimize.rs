@@ -66,6 +66,7 @@ fn optimize_unused_exprs(ir: &mut IR) -> bool {
         for (b, bdef) in &mut fdef.blocks {
             for (i, st) in bdef.stmts.iter().enumerate() {
                 let Stmt::Compute(a, ex) = st else { continue };
+                if !is_side_effect_free(ex) { continue }
                 if !unused(*a, bdef) { continue }
                 bdef.stmts.remove(i);
                 return true
