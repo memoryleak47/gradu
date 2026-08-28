@@ -2,6 +2,7 @@ use crate::{*, ir::*};
 
 pub fn optimize(ir: &mut IR) -> bool {
     if optimize_cast_around(ir) { return true }
+    if optimize_unused_exprs(ir) { return true }
     false
 }
 
@@ -45,5 +46,40 @@ fn replace_value_id(from: ValueId, to: ValueId, bdef: &mut BlkDef) {
 
     for i in in_vals_terminator(&mut bdef.terminator) {
         if *i == from { *i = to; }
+    }
+}
+
+fn unused(x: ValueId, bdef: &BlkDef) -> bool {
+    for st in &bdef.stmts {
+        for a in in_vals_stmt(&mut st.clone()) {
+            if *a == x { return false }
+        }
+    }
+    for a in in_vals_terminator(&mut bdef.terminator.clone()) {
+        if *a == x { return false }
+    }
+    true
+}
+
+fn optimize_unused_exprs(ir: &mut IR) -> bool {
+    for (f, fdef) in &mut ir.fns {
+        for (b, bdef) in &mut fdef.blocks {
+            for (i, st) in bdef.stmts.iter().enumerate() {
+                let Stmt::Compute(a, ex) = st else { continue };
+                if !unused(*a, bdef) { continue }
+                bdef.stmts.remove(i);
+                return true
+            }
+        }
+    }
+    false
+}
+
+fn is_side_effect_free(e: &Expr) -> bool {
+    use Expr::*;
+    match e {
+        // ValueToT is a side-effect as it can crash if the type fails.
+        ValueToT(..)|Input|IndexList(..)|IndexDict(..)|FnCall(..) => false,
+        TToValue(..)|NilLit|BoolLit(..)|StringLit(..)|IntLit(..)|Length(..)|BinOp(..)|LoadGlobal(..)|Fn(_)|NewList|NewDict => true,
     }
 }
